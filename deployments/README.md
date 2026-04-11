@@ -1,4 +1,4 @@
-Как работает Deployment c точки зрения кластера
+**Как работает Deployment c точки зрения кластера**
 1. API Server и Etcd (Прием заказа)Когда вы выполняете kubectl apply -f deployment.yaml:API Server получает запрос, проверяет ваши права (RBAC) и валидирует структуру YAML.
 Если всё в порядке, API Server записывает объект Deployment в etcd (базу данных кластера).
 Важно: На этом этапе ничего не запускается. API Server просто подтвердил: «Я записал ваше пожелание».
@@ -23,17 +23,18 @@
 через интерфейс CRI.Container Runtime скачивает образ и запускает контейнеры.Kubelet сообщает API Server, 
 что под успешно запущен (Running).
 
-Получить информацию о селекторах
-ks get rs my-first-deployment-b9cbc74b7 --output=jsonpath={.spec.selector} | jq
-Получить владельца
-ks get rs my-first-deployment-b9cbc74b7 --output=jsonpath={.metadata.ownerReferences} | jq
+Получить информацию о селекторах:
+```ks get rs my-first-deployment-b9cbc74b7 --output=jsonpath={.spec.selector} | jq```
 
-Рестарт приложения
+Получить владельца:
+```ks get rs my-first-deployment-b9cbc74b7 --output=jsonpath={.metadata.ownerReferences} | jq```
+
+**Рестарт приложения**
 
 Связан с изменением полей манифеста, как пример изменения версии контейнера
 
  - Можно в ручную изменить image app: 
-   kubectl set image deployment/my-first-deployment nginx:1.27.5 - не есть гуд!
+   ```kubectl set image deployment/my-first-deployment nginx:1.27.5 ``` Ручные изменения могут приветси к колизиям
 
 Лучший вариат изменения которые вызовут рестарт деплоймента изменение манифеста
 
@@ -42,13 +43,14 @@ ApiObject:
 - Deployment
 - Statefulset
 
-Рестарт приложения - kubectl rollout restart ApiObject name
+Рестарт приложения - ```kubectl rollout restart ApiObject name```
 
-Стратегия рестарта
-
-описываются в .spec.strategy.type:RollingUpdate - базовый тип стратегий  при котором создаются поды управляемые новой Replicaset постепенно
+Стратегия рестарта описываются в .spec.strategy.type:RollingUpdate - базовый тип стратегий  при котором создаются поды управляемые новой Replicaset постепенно
 те сначала запускается под под управлением новой Replicaste и только после этого удаляются поды старой ReplicaSet
-в .spec.strategy.type.RollingUpdate.maxSurge - максимальное количество подов, которое может быть указано сверх зарезервированного. Базовое значение 25%
-в .strategy.rollingUpdate.maxUnavailable - максимальное количество подов, которые будут не доступны
+
+- в .spec.strategy.type.RollingUpdate.maxSurge - максимальное количество подов, которое может быть указано сверх зарезервированного. Базовое значение 25%
+- в .strategy.rollingUpdate.maxUnavailable - максимальное количество подов, которые будут не доступны
+
+Имеется так же стратегия - Recreate при которой сначала удаляются все поды и только после этого создаются новые
 
 Документация - https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/
