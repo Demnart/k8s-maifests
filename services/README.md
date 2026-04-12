@@ -15,11 +15,11 @@ EndpointSlice содержит в себе IP адреса наших подов
 ```kubectl -n work port-forward svc/my-first-nginx 8080:80```
 
 Получить информацию о service/EndpointSlice: 
-```kubectl get svc``` - получить информацию о всех сервисах 
-```kubectl describe svc my-first-nginx``` - получить описание конкретного сервиса
-```kubectl get EndpointSlice ``` - получить информацию о всех EndpointSlice
-```kubectl describe EndpointSlice my-first-nginx-s8xqx``` - получить описание конкретного EndpointSlice
-```kubectl get EndpointSlice my-first-nginx-s8xqx -o yaml | less`` - манифест конкретного EndpointSlice
+- ```kubectl get svc``` - получить информацию о всех сервисах
+- ```kubectl describe svc my-first-nginx``` - получить описание конкретного сервиса
+- ```kubectl get EndpointSlice ``` - получить информацию о всех EndpointSlice
+- ```kubectl describe EndpointSlice my-first-nginx-s8xqx``` - получить описание конкретного EndpointSlice
+- ```kubectl get EndpointSlice my-first-nginx-s8xqx -o yaml | less``` - манифест конкретного EndpointSlice
 
-Документация -[Service](https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/)
-Рекомендации по именованию labels [Recommended Labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/)
+Документация -[Service](https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/)  
+Рекомендации по именованию labels [Recommended Labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/)  
