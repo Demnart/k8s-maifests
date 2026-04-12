@@ -20,4 +20,12 @@ StatefulSet - необходим для приложений которым ну
 Команда рестарта
 ```kubectl -n work rollout restart statefulset name```
 
+Команда для запуска контейнера для дебага: 
+```kubectl -n work run curl --rm -it --image=alpine/curl:8.14.1 -- /bin/sh```
+
+Где --rm - удаление пода из кластера после выхода из интерактивного режима
+Где -it - вход в интерактивный режим
+Где -- /bin/sh - запуск shell 
+Где --image= - образ который3 нужно запустить
+
 Поведение StatefulSet можно изменить с помощью настройки .spec.podManagementPolicy(Его значение по умолчанию OrderReady) - можно использовать Parallel
