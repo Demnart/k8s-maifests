@@ -1,0 +1,27 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: myjob
+  labels:
+    app.kubernetes.io/name: myjob-autoclean
+    app.kubernetes.io/version: v0.0.1
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: test-job
+        image: busybox:1.28
+        command:
+          - 'sh'
+          - '-c'
+          - 'echo "Test job running"... && sleep 10'
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
