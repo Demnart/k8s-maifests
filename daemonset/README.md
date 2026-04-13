@@ -51,8 +51,14 @@ as example ``` kubectl label nodes worker1 special=ds-only```
 Удалить метку с ноды:  
 ```kubectl label nodes node-name key-```
 
-Параметр nodeSelector используется в спецификацию nodeSelector
+Параметр nodeSelector используется в спецификации пода .spec.nodeselector:  
+```
+spec:
+  nodeSelector:
+    special: ds-only - key:value
+```
 
+Параметр nodeSelector - пройстейщий вид указателя на ноде с каким лейблом должен размещаться под. Есть более расшеренная конструкция для указания правил размещения подов - NodeAffinity
 
 Документация о taints [Taints](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)  
 Документация о daemonset - [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/)  
