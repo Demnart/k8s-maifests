@@ -33,6 +33,22 @@ spec:
 Deployment || StatefulSet на одной ноде кластера. 
 
 Пример ```01-podeaffinity.yml```  
+```yaml
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - testdp
+              - key: app.kubernetes.io/version
+                operator: In
+                values:
+                - v0.0.1
+```
 
 В примере в спецификации пода мы определяем раздел ```affinity```, в котором объявляем ```podAntiAffinity```  
 Дальше объясняем планировщику насколько "важен" данный вариант ```podAntiAffinity```. Возможны два варианта:  
