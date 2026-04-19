@@ -33,13 +33,29 @@ spec:
 Deployment || StatefulSet на одной ноде кластера. 
 
 Пример ```01-podeaffinity.yml```  
+```yaml
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - testdp
+              - key: app.kubernetes.io/version
+                operator: In
+                values:
+                - v0.0.1
+```
 
 В примере в спецификации пода мы определяем раздел ```affinity```, в котором объявляем ```podAntiAffinity```  
 Дальше объясняем планировщику насколько "важен" данный вариант ```podAntiAffinity```. Возможны два варианта:  
 - ```requiredDuringSchedulingIgnoredDuringExecution``` - обязательный к испольнению. Усли не удаётся подобрать ноду, удовлетворяющую данному соответсвию - под создан не будет
 - ```preferredDuringSchedulingIgnoredDuringExecution``` - мягкий вариант. Попытается найти нод, подходящую для выполнения соответствия, Если нода не будет найдена - всё равно запустит под, на какой-либо ноде  
 
-Затем указываем список правил. У нас будет одно правило, определяющее   
+Затем указываем список правил. У нас будет одно правило, определяющее по каким меткам подов мы будем ориентироваться.
 
 ```topologyKey``` - определям ноды на которых будет работать affinity. Мы указываем kubernetes.io/hostname этот label всегда устанвливается на ноды кластера автоматически  
 
@@ -114,7 +130,7 @@ testdp-7c4d8d5689-92l5n   1/1     Running   0          3m18s
 testdp-7c4d8d5689-q6mwx   0/1     Pending   0          44s
 ```  
 
-*** Вес ***  
+***Вес***  
 
 При использовании правил affinity можно указывать какой из правил имеет больше преимущество. Для этого правилам можно указать их ```weight```(вес).
 Посмотим направил ```affinty``` в новом примере ```03-nodeaffinityweight.yml```:  
