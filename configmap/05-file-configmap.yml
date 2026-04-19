@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+#immutable: true
+data:
+  file1.txt: |
+    Test file 1
+    and its
+    contents
+  file2.txt: |
+    Test file 2
+    ant its
+    content

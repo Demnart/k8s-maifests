@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: testdp
+  labels:
+    app.kubernetes.io/name: &name testdp
+    app.kubernetes.io/instance: &instance testdp
+    app.kubernetes.io/version: &version v0.0.1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: *name
+      app.kubernetes.io/instance: *instance
+      app.kubernetes.io/version: *version
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: *name
+        app.kubernetes.io/instance: *instance
+        app.kubernetes.io/version: *version
+    spec:
+      volumes:
+        - name: config-volume
+          configMap:
+            name: app-config
+      containers:
+      - name: main
+        image: busybox:1.28
+        command:
+          - 'sh'
+          - '-c'
+          - 'tail -f /dev/null'
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "64Mi"
+          limits:
+            cpu: "500m"
+            memory: "128Mi"
+        volumeMounts:
+          - name: config-volume
+            mountPath: /etc/subfile
+            subPath: file1.txt
