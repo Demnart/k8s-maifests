@@ -201,7 +201,7 @@ password:  14 bytes
 username:  5 bytes
 ```  
 
-**Приммер со stringData**  
+**Пример со stringData**  
 
 Файл ```02-secret-string.yml```:  
 
@@ -261,7 +261,7 @@ type: Opaque
 kubectl -n work delete secret my-secret
 ```  
 
-**Пример data _+ stringData**  
+**Пример data + stringData**  
 
 Также можно комбинировать data и stringData в одном манифесте. В этом случае значения из ```stringData``` будут иметь приоритет.  
 Файл ```03-secret-sd.yaml```:  
@@ -320,11 +320,6 @@ openssl req -new -x509 -key tls.key -out tls.crt -days 365 -subj "/CN=myapp"
 ```sh
 kubectl -n work create secret tls my-tl-secret --cert=tls.crt --key=tls.key
 ```    
-
-Проверяем созданный secret:  
-```sh
-kubectl -n work create secret tls my-tls-secret --cert=tls.crt --key=tls.key
-```
 ```sh 
 secret/my-tl-secret created
 ```  
@@ -406,7 +401,8 @@ kubectl -n work get secrets
 ```sh
 NAME                 TYPE                             DATA   AGE
 my-registry-secret   kubernetes.io/dockerconfigjson   1      73s
-```  
+```
+Обратите внимание на тип созданного секрета - ```kubernetes.io/dockerconfigjson```  
 Получим подробную информацию о Secret:  
 ```sh
 kubectl -n work describe secret my-registry-secret
