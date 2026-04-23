@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  labels:
+    app.kubernetes.io/name: myapp
+spec:
+  containers:
+  - name: myapp
+    image: nginx
+    volumeMounts:
+    - name: temp-storage
+      mountPath: /tmp/data
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+    ports:
+      - containerPort: 80
+  volumes:
+  - name: temp-storage
+    emptyDir: {}
