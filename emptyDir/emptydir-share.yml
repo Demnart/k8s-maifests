@@ -1,0 +1,51 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: emptydir-share-pod
+  labels:
+    app.kubernetes.io/name: emptydir-share-pod
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: v0.0.1
+spec:
+  volumes:
+  - name: shared-volume
+    emptyDir: {}
+  containers:
+  - name: producer
+    image: busybox:1.28
+    command:
+      - "/bin/sh"
+      - "-c"
+    args:
+    - |
+      while true; do
+      echo "Data generated at $(date)" >> /shared-data/data.txt; done
+    volumeMounts:
+    - name: shared-volume
+      mountPath: /shared-data
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+  - name: consumer
+    image: busybox:1.28
+    command:
+    - "/bin/sh"
+    - "-c"
+    args:
+    - |
+      tail -f /shared-data/data.txt
+    volumeMounts:
+    - name: shared-volume
+      mountPath: /shared-data
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
