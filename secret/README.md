@@ -1,3 +1,16 @@
+[Secret](#secret)  
+[Основные характеристики Secret](#основные-характеристики-secret)  
+[Создание Secret](#создание-secret)  
+- [Из литералов](#из-литералов)    
+- [Из файлов](#из-файлов)  
+- [Из YAML-манифеста](#из-yaml-манифеста)  
+- [Тип kubernetes.io/tls](#тип-kubernetesiotls)  
+- [Тип kubernetes.io/dockerconfigjson](#тип-kubernetesiodockerconfigjson)  
+
+[Использование Secret](#использование-secret)  
+[Файлы](#файлы)  
+[Безопасность Secret](#безопасность-secret)  
+
 # Secret  
 В Kubernteses часто возникает необходимость передачи приложение конфигурационных данных. Для не конфидицильной информации используются ```ConfigMap```.  
 Однако когда речь заходит о паролях, токенах, TLS-ключах, ```CongifMap``` не обеспечивает должного уровня безопасности, т.к. хранит данные в открытом виде.  
@@ -17,7 +30,7 @@
 
 Существует несколько способов создания Secret:  
 
-1. **Из литералов**  
+### Из литералов
 ```sh
 kubectl -n work create secret generic my-secret  --from-literal=username=admin --from-literal=password=secretpassword
 ```  
@@ -85,7 +98,7 @@ admin
 
 ```kubectl -n work delete secret my-secret```  
 
-2. **Из файлов**  
+### Из файлов  
 
 Содержимое ```Secret``` при его создании можно получить из файлов:  
 
@@ -136,7 +149,7 @@ kubectl -n work delete secret my-secret
 rm -f password.txt username.txt 
 ```  
 
-3. **Из YAML-манифеста**  
+### Из YAML-манифеста    
 
 При создании Secret из YAML-манифеста можно использовать два поля для данных:  
 - ```data```- для уже закодированных в base64 данных  
@@ -303,7 +316,7 @@ admin
 kubectl -n work delete secret my-secret
 ```  
 
-4. **Тип kubernetes.io/tls**  
+### Тип kubernetes.io/tls
 
 ```Secret``` типа ```kubernetes.io/tls``` используется для хранения TLS-сертификтов и приватных ключей. Для создания такого Secret  сначала нужно сгенерировать сертификат и ключ с помощью OpenSSL.  
 
@@ -369,7 +382,7 @@ rm -f tls.*
 kubectl -n work delete secret my-tls-secret
 ```  
 
-5. **Тип kubernetes.io/dockerconfigjson**  
+### Тип kubernetes.io/dockerconfigjson    
 Secret типа ```kubernetes.io/dockerconfigjson``` используется для хранения ученных данных Docker registry. Его можно создать двумя способами:  
 
    1. Используя файл конфигурации Docker:  
