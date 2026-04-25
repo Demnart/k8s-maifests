@@ -1,10 +1,10 @@
-***DaemonSet***  
+# DaemonSet  
 
 DaemonSet - сущность кластера k8s необходима для запуска/поддержки одного пода на каждой воркер ноде  
 В отличии от Deploymenst/StatefulSet - обычно Service не указывается  
 DaemonSet как и Deployment не гарантирует строгое именование подов в отличии от StatefulSet  
 
-***Taints***  
+## Taints    
 По умолчанию на control node есть следующий taint - ```[map[effect:NoSchedule key:node-role.kubernetes.io/control-plane]]```  
 Формат состоит из 3-х частей - ```key=[value]:Effect```
 - key - ключ taint - наример node-role.kubernetes.io/control-plane
@@ -26,7 +26,7 @@ DaemonSet как и Deployment не гарантирует строгое име
 ```kubectl taint nodes node-name test-taint=:NoExecute-```
 
 
-***Tolerations***  
+## Tolerations  
 Механизм с помощью которого можно разрещить помещать поды на ноды с указанными Taints  
 Размещать tolerations необходимо в спецификациях пода!  
 Пример:  
@@ -38,7 +38,7 @@ spec:
       effect: "NoSchedule"
 ``` 
 
-***NodeSelector***
+## NodeSelector
 
 При необходимости запуска пода на конкретной ноды можно использовать NodeSelector использует метки  
 Установка метки на ноду:  
