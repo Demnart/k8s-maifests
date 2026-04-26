@@ -1,0 +1,86 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath-writer
+  labels:
+    app.kubernetes.io/name: hostpath-writer
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: v0.0.1
+spec:
+  containers:
+  - name: writer
+    image: busybox:1.37
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/sh", "-c"]
+    args:  
+    - |
+      while true; do
+        echo "Writer says hello at $(date)" >> /data/shared.log;
+        sleep 5;
+      done;
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+    volumeMounts:
+    - name: shared-data
+      mountPath: /data
+  volumes:
+  - name: shared-data
+    hostPath:
+      # Путь на хост-машине
+      path: /tmp/k8s-book-shared
+      # Kuberntes создаст директорию, если её нет.
+      type: DirectoryOrCreate
+  restartPolicy: Never
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath-reader
+  labels:
+    app.kubernetes.io/name: hostpath-reader
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: v0.0.1
+spec:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - hostpath-writer
+        topologyKey: kubernetes.io/hostname
+  containers:
+  - name: reader
+    image: busybox:1.37
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/sh", "-c"]
+    args:  
+    - |
+      while [ ! -f /data/shared.log ]; do sleep 2; done;
+      tail -f /data/shared.log
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+    volumeMounts:
+    - name: shared-data
+      mountPath: /data
+  volumes:
+  - name: shared-data
+    hostPath:
+      # Путь на хост-машине
+      path: /tmp/k8s-book-shared
+      # Kuberntes создаст директорию, если её нет.
+      type: DirectoryOrCreate
+  restartPolicy: Never

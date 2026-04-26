@@ -1,0 +1,44 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath-write-demo
+  labels:
+    app.kubernetes.io/name: hostpath-write-demo
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: v0.0.1
+spec:
+  containers:
+  - name: main-container
+    image: busybox:1.37
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/sh", "-c"]
+    args:  
+    - |
+      echo "Hello form pod $(POD_NAME)!" > /data/hello.txt;
+      echo "Data written to /data/hello.txt";
+      echo "---";
+      sleep infinity;
+    env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+    volumeMounts:
+    - name: host-data
+      mountPath: /data
+  volumes:
+  - name: host-data
+    hostPath:
+      # Путь на хост-машине
+      path: /tmp/k8s-book-data
+      # Kuberntes создаст директорию, если её нет.
+      type: DirectoryOrCreate
+  restartPolicy: Never
