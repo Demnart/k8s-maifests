@@ -1,5 +1,10 @@
 # Projected Volumes
 
+[Projected Volumes](#projected-volumes)  
+[Источники данных для projected-томов](#источники-данных-для-projected-томов)  
+[Использование projected-томов](#использование-projected-тома)  
+[Расширенная настройка ServiceAccountToken](#расширенная-настройка-serviceaccounttoken)  
+
 Механизм [projected volume](https://kubernetes.io/docs/concepts/storage/projected-volumes/) в Kubernetes позволяет монтировать несколько источников данных в одну и ту же директорию внутри контейнера. Этот инструмент, который позволяет гибко управлять конфигурацией, секретами и метаданными, доступными для приложения.  
 
 
@@ -62,7 +67,6 @@ secret/db-credentials created
 Создадим под, который будет использовать ```projected``` том дя монтирования данных из ```ConfigMap```, ```Secret```, ```downwardAPI```. Манифест ```projected-volume-demo.yml```:  
 
 ```yml
----
 ---
 apiVersion: v1
 kind: Pod
@@ -207,7 +211,6 @@ configmap "app-config" deleted
 Манифест ```projected-satoken.yml```:
 
 ```yml
----
 ---
 apiVersion: v1
 kind: Pod
