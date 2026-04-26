@@ -1,0 +1,70 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: projected-volume-demo
+  labels:
+    app.kubernetes.io/name: projected-volume-demo
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: v0.0.1
+spec:
+  volumes:
+  - name: all-in-one-volume
+    projected:
+      sources:
+        # Источник 1: DownwardAPI для метаданных пода
+        - downwardAPI:
+            items:
+            - path: "pod_name"
+              fieldRef:
+                fieldPath: metadata.name
+            - path: "pod_namespace"
+              fieldRef:
+                fieldPath: metadata.namespace
+        # Источник 2: ConfigMap для конфигурации приложения
+        - configMap:
+            name: app-config
+            items:
+            - key: app.properties
+              path: app.properties
+        # Источник 3: Secret для учетных данных
+        - secret:
+            name: db-credentials #имя secret
+            items:
+            - key: username
+              path: username
+            - key: password
+              path: password
+  containers:
+  - name: main-container
+    image: busybox:1.37
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/sh", "-c"]
+    args:  
+    - |
+      echo "---Reading projectoed data---";
+      echo "[+] Pod Info:";
+      cat /etc/pod-data/pod_name;
+      echo "";
+      cat /etc/pod-data/pod_namespace;
+      echo "";
+      echo "[+] App config:";
+      cat /etc/pod-data/app.properties;
+      echo "";
+      echo "[+] DB Credentials:";
+      echo "Username: $(cat /etc/pod-data/username)";
+      echo "Password: $(cat /etc/pod-data/password)";
+      echo "Done";
+      sleep infinity;
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+    volumeMounts:
+    - name: all-in-one-volume
+      mountPath: /etc/pod-data
+      readOnly: true # рекомендуется для projected томов
+  restartPolicy: Never
