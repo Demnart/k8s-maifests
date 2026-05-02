@@ -1,0 +1,24 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-01
+  labels:
+    # Метки используются для более гибкого связывания с PVC
+    app.kubernetes.io/name: nfs-storage
+    app.kubernetes.io/instance: manual
+spec:
+  # Объем хранилища, доступный в этом томе
+  capacity:
+    storage: 1Gi
+  # Режимы доступа, которые поддерживает этот том.
+  accessModes:
+    - ReadWriteMany
+  # Политика возврата. 
+  persistentVolumeReclaimPolicy: Retain
+  # Тип тома. В данном случае - NFS
+  nfs:
+    # Путь к директории на NFS-сервере
+    path: /volume1/nfs
+    #Адрес NFS-сервера
+    server: 192.168.122.193
