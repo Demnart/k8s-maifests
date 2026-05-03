@@ -1,0 +1,14 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-client
+  labels:
+    app.kuberntes.io/name: app-config
+    app.kuberntes.io/instance: test
+    app.kuberntes.io/version: v0.0.1
+# Этот provisioner должен соответствовать имени, с которым он зарегистрирован в кластере.
+provisioner: artiom.local/nfs
+# Параметры, передаваемые provisioner'у
+parameters:
+  onDelete: delete

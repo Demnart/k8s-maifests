@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-dynamyc
+  labels:
+    app.kuberntes.io/name: app-config
+    app.kuberntes.io/instance: test
+    app.kuberntes.io/version: v0.0.1
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Mi
+  # Явно указываем, какой StorageClass использовать.
+  storageClassName: nfs-client
+
