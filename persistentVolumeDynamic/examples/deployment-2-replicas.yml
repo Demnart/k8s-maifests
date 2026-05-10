@@ -1,0 +1,63 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-replica-app
+  labels: &labels
+    app.kuberntes.io/name: multi-replica-app
+    app.kuberntes.io/instance: test
+spec:
+  replicas: 2
+  selector:
+    matchLabels: *labels
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      # Том, который будет использоваться контейнером
+      # Его источник PVC с именем 'shared-data-pvc'
+      volumes:
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: shared-data-pvc
+      containers:
+      - name: main
+        image: busybox:1.37
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          while true; do
+            echo "[$(date '+%H:%M:%S')] Pod: $HOSTNAME" >> /data/shared.log;
+            sleep 3;
+          done
+        resources:
+          limits:
+            memory: "100Mi"
+            cpu: "250m"
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+        volumeMounts:
+          - name: shared-data
+            mountPath: /data
+
+---
+# PVC, который будет запрашивать хранилище.
+# Он будет создан вместе с Deployment.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shared-data-pvc
+  labels:
+    app.kuberntes.io/name: shared-data-pvc
+    app.kuberntes.io/instance: test
+spec:
+  resources:
+    requests:
+      storage: 256Mi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  # Указываем StorageClass, что мы создали ранее.
+  storageClassName: nfs-client
+

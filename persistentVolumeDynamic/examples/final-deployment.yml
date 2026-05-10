@@ -1,0 +1,65 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stateful-app
+  labels: &labels
+    app.kuberntes.io/name: stateful-app
+    app.kuberntes.io/instance: test
+    app.kuberntes.io/version: v0.0.1
+spec:
+  replicas: 1
+  selector:
+    matchLabels: *labels
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      # Том, который будет использоваться контейнером
+      # Его источник PVC с именем 'app-data-pvc'
+      volumes:
+      - name: app-data
+        persistentVolumeClaim:
+          claimName: app-data-pvc
+      containers:
+      - name: main
+        image: busybox:1.37
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          while true; do
+            echo "Log entry $(date)" >> /data/app.log;
+            sleep 5;
+          done
+        resources:
+          limits:
+            memory: "100Mi"
+            cpu: "250m"
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+        volumeMounts:
+          - name: app-data
+            mountPath: /data
+
+---
+# PVC, который будет запрашивать хранилище.
+# Он будет создан вместе с Deployment.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-data-pvc
+  labels:
+    app.kuberntes.io/name: app-data-pvc
+    app.kuberntes.io/instance: test
+    app.kuberntes.io/version: v0.0.1
+spec:
+  resources:
+    requests:
+      storage: 256Mi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  # Указываем StorageClass, что мы создали ранее.
+  storageClassName: nfs-client
+
