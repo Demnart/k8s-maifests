@@ -1,0 +1,61 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: web
+  labels: &labels
+    app.kuberntes.io/name: web
+    app.kuberntes.io/instance: test
+    app.kuberntes.io/version: v0.0.1
+spec:
+  selector:
+    matchLabels: *labels
+  serviceName: nginx
+  replicas: 2
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      containers:
+        - name: app
+          image: nginx:1.27
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              # Записываем имя хоста в index.html
+              echo "Hostname: $(hostname)" > /usr/share/nginx/html/index.html;
+              #Запускаем nginx
+              nginx -g 'daemon off;';
+          ports:
+            - containerPort: 80
+              name: web
+          volumeMounts:
+            - name: www
+              mountPath: /usr/share/nginx/html
+  # Шаблон для автоматического создания PVC  
+  volumeClaimTemplates:
+  - metadata:
+      name: www
+    spec:
+      accessModes: [ "ReadWriteMany" ]
+      storageClassName: "nfs-client"
+      resources:
+        requests:
+          storage: 1Gi
+
+---
+#Headless Service, необходимый для StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels: &labels
+    app.kuberntes.io/name: web
+    app.kuberntes.io/instance: test
+    app.kuberntes.io/version: v0.0.1  
+spec:
+  selector: *labels
+  ports:
+  - port: 80
+    targetPort: web
+  clusterIP: None
