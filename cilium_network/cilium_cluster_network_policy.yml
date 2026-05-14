@@ -1,0 +1,12 @@
+---
+kind: CliumClusterwideNetworkPolicy
+apiVersion: cilium.io/v2
+metadata:
+  name: deny-external-access
+spec:
+  endpointSelector:
+    matchLabels:
+      envionment: production
+  inressDeny:
+  - fromCIDR:
+    - "0.0.0.0/0"
