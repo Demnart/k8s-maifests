@@ -191,3 +191,48 @@ hubble observe --namespace default --folow
 ```
 
 ## Просмотр заблокированного траффика
+
+Команда --```verdict DROPPED``` показывает пакеты, отброшенные eBPF: 
+
+```sh
+hubble observe --verdict DROPPED --last 5
+```
+```sh
+May 15 10:49:48.477: fe80::d4f5:b3ff:fe85:7a9b (ID:7330) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+May 15 10:50:00.765: fe80::c8e0:82ff:fe8e:5dcc (ID:4436) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+May 15 10:51:43.165: fe80::d4f5:b3ff:fe85:7a9b (ID:7330) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+May 15 10:52:07.741: fe80::c8e0:82ff:fe8e:5dcc (ID:4436) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+May 15 10:52:16.448: fe80::4066:55ff:fedc:df91 (ID:7935) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+May 15 10:53:41.950: fe80::acbf:eff:fe6e:b228 (ID:38289) <> ff02::2 (unknown) Unsupported L3 protocol DROPPED (ICMPv6 RouterSolicitation)
+```
+
+В данном случае отбрасывается IPv6 multicast-трафик - это нормально, IPv6 отключён в конфигурации Cilium.
+
+При применении Network Policies заблокированный трафик так же будет виден здесь с соответсвующей причиной (Policy denied).  
+
+Удалим тестовые ресурсы:  
+
+```sh
+kubectl delete pod dnstools nginx-test
+kubectl delete svc nginx-test-svc
+```
+
+## Hubble UI
+
+Hubble UI - веб-интерфейс для визуализации сетевых потоков. Создается как ClusterIP-сервис:
+
+```sh
+kubectl get svc -n kube-system hubble-ui
+```
+```sh
+NAME        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+hubble-ui   ClusterIP   10.97.229.141   <none>        80/TCP    13m
+```
+
+## Доступ к Hubble UI
+
+Для доступа к веб-интрфейсу используем port-forward:
+
+```sh
+kubectl port-forward -n kube-system svc/hubble-ui 12000:80
+```
