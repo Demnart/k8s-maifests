@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -19,6 +20,10 @@ spec:
         app.kubernetes.io/instance: *instance
         app.kubernetes.io/version: *version
     spec:
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
       containers:
         - name: whoami
           image: traefik/whoami
