@@ -1,0 +1,21 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: 17-policy-app1
+spec:
+  endpointSelector:
+    matchLabels:
+      app: app1
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app: dnstools
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP
+      rules:
+        http:
+        - method: GET
+          path: "/"
