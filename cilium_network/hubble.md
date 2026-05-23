@@ -187,7 +187,7 @@ hubble observe --protocol TCP --namespace default
 Наблюдение в реальном времени(follow):  
 
 ```sh
-hubble observe --namespace default --folow
+hubble observe --namespace default --follow
 ```
 
 ## Просмотр заблокированного траффика
