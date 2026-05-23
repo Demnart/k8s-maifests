@@ -1,0 +1,35 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-root-issuer
+  namespace: cert-manager
+spec:
+  selfSigned: {}
+---
+# 2. Выпускаем сам корневой сертификат на 10 лет
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: local-gateway-ca
+  namespace: cert-manager # <-- Генерируем секрет тоже здесь
+spec:
+  isCA: true
+  commonName: "local-gateway-ca"
+  secretName: local-gateway-ca-secret # <-- Имя секрета, которое будет использоваться
+  duration: 87600h # 10 лет
+  renewBefore: 720h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-root-issuer
+    kind: Issuer
+---
+# 3. Глобальный ClusterIssuer
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: local-cluster-issuer
+spec:
+  ca:
+    secretName: local-gateway-ca-secret
