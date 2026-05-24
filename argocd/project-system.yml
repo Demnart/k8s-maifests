@@ -14,7 +14,7 @@ spec:
       server: 'https://kubernetes.default.svc'
   clusterResourceWhitelist:
     - group: '*'
-      kind: 'namespace'
+      kind: 'Namespace'
     - group: 'scheduling.k8s.io'
       kind: 'PriorityClass'
     - group: 'rbac.authorization.k8s.io'

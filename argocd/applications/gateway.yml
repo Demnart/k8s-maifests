@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway-infra
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: system-utils
+  source:
+    repoURL: 'https://github.com/Demnart/k8s-maifests'
+    path: argocd/clusterapp/gateway/
+    targetRevision: HEAD
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: gateway-infra
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

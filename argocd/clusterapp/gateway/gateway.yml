@@ -1,0 +1,28 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: cilium-gateway
+  namespace: gateway-infra
+  annotations:
+    # Говорим cert-manager автоматически следить за этим гейтвеем и выпускать серты
+    cert-manager.io/cluster-issuer: "local-cluster-issuer"
+spec:
+  gatewayClassName: cilium
+  listeners:
+  - name: argocd-https
+    protocol: HTTPS
+    port: 443
+    hostname: "argocd.local" # <-- Указываем hostname для TLS
+    allowedRoutes:
+      namespaces:
+        from: All
+    tls:
+      mode: Terminate # Cilium (Envoy) сам расшифрует SSL трафик
+      certificateRefs:
+      - name: argocd-cluster-tls # Наш новый секрет 
+  - name: http
+    protocol: HTTP
+    port: 80
+    allowedRoutes:
+      namespaces:
+        from: All
