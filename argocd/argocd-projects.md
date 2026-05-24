@@ -56,4 +56,86 @@ spec:
 
 Как говорилось выше можно создавать/редактировать Projects как в веб-интерфейсе, так и с помощью манифестов.
 
-## Добавление приложения. 
+## Создание приложения
+
+Создать приложение можно как через веб-интерфейс, так же с помощью манифестов. 
+
+Ниже рассмотрим вариант добавления приложения в ранее созданный проект с помощью манифеста. 
+
+Файл `application/base.yml`
+
+```sh
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: base
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: system-utils
+  source:
+    repoURL: 'https://github.com/Demnart/k8s-maifests'
+    path: argocd/clusterapp/app/
+    targetRevision: HEAD
+  destination:
+    server: 'https://kubernetes.default.svc'
+  syncPolicy: { }
+```
+
+Применим манифест: 
+
+```sh
+kubectl apply -f applications/base.yml
+```
+```sh
+Warning: metadata.finalizers: "resources-finalizer.argocd.argoproj.io": prefer a domain-qualified finalizer name including a path (/) to avoid accidental conflicts with other finalizer writers
+application.argoproj.io/base created
+```
+
+На Warning можно не обращать внимания он никак не влияет на работу приложения. 
+
+Итак после применения приложения мы можем проверить его статус. Т.к. приложение было размещено в namespace argocd проверим его статус в этом namespace.  Дополнительно: при установке Argo CD у нас в кластере появляется Custom Resource Defenition (CRD) argoproj.io со следующими ресурсами: 
+
+  - **App Project** - в которй по умолчанию входит default project и все наши последующие проекты.  
+  - **Application** - созданные нами приложения.  
+  - **Application Set** - специальный ресурс позволяющий размещать одно приложение на множество кластеров Kubernetes. 
+
+Проверим приложение манифест которого мы применили ранее: 
+
+```sh
+kubectl -n argocd get application
+```
+```sh
+NAME   SYNC STATUS   HEALTH STATUS
+base   OutOfSync     Missing
+```
+
+Приложение было успешно размещено в кластере, а так же если заглянуть в веб-интерфейс появилось и там. Но, сейчас у нас приложение находится в `SYNC STATUS: OutOfSync ` это связано с тем, что в самом манифесте указано `syncPolicy: { }`. Т.е. синхронизация должна быть подтверждена в ручную. 
+
+Сделаем это через веб-интерфейс: 
+
+![Apply Sync](./images/sync.png) 
+
+Нажмем на Sync, после чего в появивщемся окне не трогая каких-либо чекбоксов нажмем Synchronize. 
+
+![App successfull sync](./images/succ-sync.png)
+
+Приложение успешно синхронизировалось с github-репозиторием. Первое приложение это PriorityClass. Давайте проверим были ли добавлены описанные нами PriorityClass:
+
+```sh
+kubectl get priorityclass
+```
+```sh
+NAME                      VALUE        GLOBAL-DEFAULT   AGE     PREEMPTIONPOLICY
+high-priority             2000000      false            5m26s   PreemptLowerPriority
+low-priority              1000000      false            5m26s   PreemptLowerPriority
+medium-priority           1005000      false            5m26s   PreemptLowerPriority
+system-cluster-critical   2000000000   false            14d     PreemptLowerPriority
+system-node-critical      2000001000   false            14d     PreemptLowerPriority
+```
+
+Описанные в манифесте PriorityClass успешно добавлены в кластер. 
+
+> Уточнение. Хоть приложение и было создано в рамках namespace argocd, ресурс PriorityClass это кластерная сущность, поэтому при проверке мы и не указывали namespace.
+
