@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: system-utils
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Cluster utilities, monitoring, logging and etc.
+  sourceRepos:
+    - 'https://github.com/Demnart/k8s-maifests'
+  destinations:
+    - namespace: '*'
+      server: 'https://kubernetes.default.svc'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: 'namespace'
+    - group: 'scheduling.k8s.io'
+      kind: 'PriorityClass'
+    - group: 'rbac.authorization.k8s.io'
+      kind: '*'
+    - group: 'storage.k8s.io'
+      kind: '*'
+    - group: 'apiregistration.k8s.io'
+      kind: 'ApiService'
+    - group: 'admissionregistration.k8s.io'
+      kind: 'ValidatingWebhookConfiguration'
+    
