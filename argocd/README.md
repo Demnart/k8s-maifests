@@ -280,7 +280,7 @@ cilium-gateway   cilium   192.168.122.10   True         20m
 Проверим, что у нас создался секрет типа tls и его содержимое:
 
 ```sh
-kubectl get secret
+kubectl -n gateway-infra get secret
 ```
 ```sh
 NAME                 TYPE                DATA   AGE
