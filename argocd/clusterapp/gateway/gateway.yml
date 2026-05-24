@@ -3,6 +3,8 @@ kind: Gateway
 metadata:
   name: cilium-gateway
   namespace: gateway-infra
+  labels:
+    app.kubernetes.io/name: cilium-gateway
   annotations:
     # Говорим cert-manager автоматически следить за этим гейтвеем и выпускать серты
     cert-manager.io/cluster-issuer: "local-cluster-issuer"

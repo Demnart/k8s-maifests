@@ -139,3 +139,58 @@ system-node-critical      2000001000   false            14d     PreemptLowerPrio
 
 > Уточнение. Хоть приложение и было создано в рамках namespace argocd, ресурс PriorityClass это кластерная сущность, поэтому при проверке мы и не указывали namespace.
 
+Далее последовательно применим манифесты приложений:
+
+```sh
+kubectl apply -f applications/gateway.yml
+kubectl apply -f applications/nfs.yml
+```
+
+Это создаст приложения Argo CD которые будут отвечать за размещение в кластере NFS-provisioner для PV и размещение Gateway для всего кластера с указанием сертификата для argocd.local. 
+
+После синхронизации приложений в веб-интерфейсе, можем проверить состояние приложений в кластере:
+
+```sh
+kubectl -n argocd get applications
+```
+```sh
+NAME             SYNC STATUS   HEALTH STATUS
+base             Synced        Healthy
+gateway-infra    Synced        Healthy
+nfs-pv-creator   Synced        Healthy
+```
+
+## Автоматическая синхронизация. 
+
+При создании манифестов выше мы оставляли параметр syncPolicy: { } , т.е.  синхронизацию приложения Argo CD с источником необходимо было производить в ручную. 
+
+Сейчас я в веб-интерфейсе настроил автоматическую синхронизацию. Для этого в веб-приложении я выбрал приложение base -> Details -> SYNC POLICY:
+
+![Sync Policy](./images/sync-policy.png)
+
+В этом же открывшемся окне сверху мы можем перейти во вкладку MANIFEST и увидеть изменения манифеста после включения Auto Sync:
+
+![Application Manifest](./images/details-sync.png)
+
+Мы можем взять то, что указано в этом окне и добавить его в наш манифест в блок `spec`.
+
+Кстати если мы сейчас проверим манифест нашего приложения в Kubernetes, в нём будет виден добавленный блок авто-синхронизации: 
+
+```sh
+kubectl -n argocd get application base -o yaml
+```
+```sh
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+  project: system-utils
+  source:
+    path: argocd/clusterapp/app/
+    repoURL: https://github.com/Demnart/k8s-maifests
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: false
+      selfHeal: true
+```
