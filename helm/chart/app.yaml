@@ -1,0 +1,132 @@
+---
+# Source: openresty-art/templates/configmap-conf.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: art-conf
+  labels:
+    helm.sh/chart: openresty-art-0.1.0
+    app.kubernetes.io/name: openresty-art
+    app.kubernetes.io/instance: app
+    app.kubernetes.io/version: "openresty/openresty:1.27.1.2-0-alpine"
+    app.kubernetes.io/managed-by: Helm
+data:
+  default.conf: |-
+    server {
+        listen 80;
+        server_name localhost;
+
+        location / {
+            root /usr/local/openresty/nginx/html;
+            index index.html index.htm;
+        }
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+            root /usr/local/openresty/nginx/html;
+        }
+    }
+
+---
+# Source: openresty-art/templates/configmap-html.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: art-html
+  labels:
+    helm.sh/chart: openresty-art-0.1.0
+    app.kubernetes.io/name: openresty-art
+    app.kubernetes.io/instance: app
+    app.kubernetes.io/version: "openresty/openresty:1.27.1.2-0-alpine"
+    app.kubernetes.io/managed-by: Helm
+data:
+  index.html: |-
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Test page!</title>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <h1>Test page!</h1>
+    </body>
+    </html>
+  50x.html: |-
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>50x error!</title>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <h1>50x error!</h1>
+    </body>
+    </html>
+---
+# Source: openresty-art/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: art-svc
+  labels:
+    helm.sh/chart: openresty-art-0.1.0
+    app.kubernetes.io/name: openresty-art
+    app.kubernetes.io/instance: app
+    app.kubernetes.io/version: "openresty/openresty:1.27.1.2-0-alpine"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    kubernetes.io/name: openresty-art
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+# Source: openresty-art/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: art
+  labels:
+    helm.sh/chart: openresty-art-0.1.0
+    app.kubernetes.io/name: openresty-art
+    app.kubernetes.io/instance: app
+    app.kubernetes.io/version: "openresty/openresty:1.27.1.2-0-alpine"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    reloader.stakater.com/match: "true"
+spec:
+  selector:
+    matchLabels:
+      kubernetes.io/name: openresty-art
+  replicas: 2
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        kubernetes.io/name: openresty-art
+    spec:
+      containers:
+      - name: myapp
+        image: <Image>
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "256m"
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html
+          mountPath: /usr/local/openresty/nginx/html
+        - name: conf
+          mountPath: /etc/nginx/conf.d
+    volumes:
+    - name: html
+      configMap:
+        name: art-html
+    - name: conf
+      configMap:
+        name: art-conf

@@ -3,5 +3,5 @@ name: openresty-art
 description: My Vision of OpenResty
 type: application
 version: 0.1.0
-appVersion: "openresty/openresty:1.27.1.2-0-alpine"
+appVersion: "1.27.1.2-0-alpine"
 kubeVersion: ">=1.34.0"
