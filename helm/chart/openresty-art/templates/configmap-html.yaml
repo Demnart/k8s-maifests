@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openresty-art.fullname" . }}-html
+  labels:
+    {{- include "openresty-art.labels" . | nindent 4 }}
+data:
+  index.html: |-
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Test page!</title>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <h1>Test page!</h1>
+    </body>
+    </html>
+  50x.html: |-
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>50x error!</title>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <h1>50x error!</h1>
+    </body>
+    </html>
