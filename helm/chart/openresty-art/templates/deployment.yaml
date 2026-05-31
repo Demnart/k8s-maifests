@@ -10,37 +10,46 @@ metadata:
     reloader.stakater.com/match: "true"
   {{- end }}
 spec:
+  replicas: {{ .Values.application.replicaCount }}
+  revisionHistoryLimit: {{ .Values.application.revisionHistoryLimit }}
   selector:
     matchLabels:
-      kubernetes.io/name: openresty-art
-  replicas: 2
-  revisionHistoryLimit: 3
+      {{- include "openresty-art.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- with .Values.application.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
-        kubernetes.io/name: openresty-art
+        {{- include "openresty-art.selectorLabels" . | nindent 8 }}
     spec:
+      {{- with .Values.application.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
-      - name: openresty-art
-        image: openresty/openresty:1.27.1.2-0-alpine
+      - name: {{ include "openresty-art.fullname" . }}
+        image: "{{ .Values.application.image.repository }}:{{ .Values.application.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.application.image.pullPolicy }}
+        {{- with .Values.application.probes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.application.resources }}
         resources:
-          limits:
-            memory: "128Mi"
-            cpu: "256m"
-          requests:
-            memory: "64Mi"
-            cpu: "100m"
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         ports:
         - containerPort: 80
+        {{- if .Values.application.volumeMounts }}
         volumeMounts:
-        - name: html
-          mountPath: /usr/local/openresty/nginx/html
-        - name: conf
-          mountPath: /etc/nginx/conf.d
+          {{- toYaml .Values.application.volumeMounts | nindent 10 }}
+        {{- end }}
+      {{- if .Values.application.volumes }}
       volumes:
-      - name: html
-        configMap:
-          name: {{ include "openresty-art.fullname" . }}-html
-      - name: conf
-        configMap:
-          name: {{ include "openresty-art.fullname" . }}-conf
+        {{- range .Values.application.volumes }}
+        - name: {{ .name }}
+          configMap:
+            name: {{ printf "%s-%s" (include "openresty-art.fullname" $) .configMapSuffix }}
+        {{- end }}
+      {{- end }}

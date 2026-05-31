@@ -8,7 +8,7 @@ metadata:
     helm.sh/chart: openresty-art-0.1.0
     app.kubernetes.io/name: openresty-art
     app.kubernetes.io/instance: app
-    app.kubernetes.io/version: "openresty/openresty:1.27.1.2-0-alpine"
+    app.kubernetes.io/version: "1.27.1.2-0-alpine"
     app.kubernetes.io/managed-by: Helm
 data:
   default.conf: |-
@@ -37,7 +37,7 @@ metadata:
     helm.sh/chart: openresty-art-0.1.0
     app.kubernetes.io/name: openresty-art
     app.kubernetes.io/instance: app
-    app.kubernetes.io/version: "openresty/openresty:1.27.1.2-0-alpine"
+    app.kubernetes.io/version: "1.27.1.2-0-alpine"
     app.kubernetes.io/managed-by: Helm
 data:
   index.html: |-
@@ -72,7 +72,7 @@ metadata:
     helm.sh/chart: openresty-art-0.1.0
     app.kubernetes.io/name: openresty-art
     app.kubernetes.io/instance: app
-    app.kubernetes.io/version: "openresty/openresty:1.27.1.2-0-alpine"
+    app.kubernetes.io/version: "1.27.1.2-0-alpine"
     app.kubernetes.io/managed-by: Helm
 spec:
   selector:
@@ -91,42 +91,61 @@ metadata:
     helm.sh/chart: openresty-art-0.1.0
     app.kubernetes.io/name: openresty-art
     app.kubernetes.io/instance: app
-    app.kubernetes.io/version: "openresty/openresty:1.27.1.2-0-alpine"
+    app.kubernetes.io/version: "1.27.1.2-0-alpine"
     app.kubernetes.io/managed-by: Helm
   annotations:
     reloader.stakater.com/match: "true"
 spec:
+  replicas: 1
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
-      kubernetes.io/name: openresty-art
-  replicas: 2
-  revisionHistoryLimit: 3
+      app.kubernetes.io/name: openresty-art
+      app.kubernetes.io/instance: app
   template:
     metadata:
       labels:
-        kubernetes.io/name: openresty-art
+        app.kubernetes.io/name: openresty-art
+        app.kubernetes.io/instance: app
     spec:
+      imagePullSecrets:
+        - name: MySecret
       containers:
-      - name: myapp
-        image: <Image>
+      - name: art
+        image: "openresty/openresty:1.27.1.2-0-alpine"
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /index.html
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /index.html
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           limits:
-            memory: "128Mi"
-            cpu: "256m"
+            cpu: 100m
+            memory: 128Mi
           requests:
-            memory: "64Mi"
-            cpu: "100m"
+            cpu: 100m
+            memory: 128Mi
         ports:
         - containerPort: 80
         volumeMounts:
+          - mountPath: /usr/local/openresty/nginx/html
+            name: html
+          - mountPath: /etc/nginx/conf.d
+            name: conf
+      volumes:
         - name: html
-          mountPath: /usr/local/openresty/nginx/html
+          configMap:
+            name: art-html
         - name: conf
-          mountPath: /etc/nginx/conf.d
-    volumes:
-    - name: html
-      configMap:
-        name: art-html
-    - name: conf
-      configMap:
-        name: art-conf
+          configMap:
+            name: art-conf
