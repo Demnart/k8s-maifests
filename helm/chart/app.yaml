@@ -7,7 +7,7 @@ metadata:
   labels:
     helm.sh/chart: openresty-art-0.1.0
     app.kubernetes.io/name: openresty-art
-    app.kubernetes.io/instance: app
+    app.kubernetes.io/instance: release-name
     app.kubernetes.io/version: "1.27.1.2-0-alpine"
     app.kubernetes.io/managed-by: Helm
 data:
@@ -36,7 +36,7 @@ metadata:
   labels:
     helm.sh/chart: openresty-art-0.1.0
     app.kubernetes.io/name: openresty-art
-    app.kubernetes.io/instance: app
+    app.kubernetes.io/instance: release-name
     app.kubernetes.io/version: "1.27.1.2-0-alpine"
     app.kubernetes.io/managed-by: Helm
 data:
@@ -71,16 +71,18 @@ metadata:
   labels:
     helm.sh/chart: openresty-art-0.1.0
     app.kubernetes.io/name: openresty-art
-    app.kubernetes.io/instance: app
+    app.kubernetes.io/instance: release-name
     app.kubernetes.io/version: "1.27.1.2-0-alpine"
     app.kubernetes.io/managed-by: Helm
 spec:
+  type: ClusterIP
   selector:
-    kubernetes.io/name: openresty-art
+    app.kubernetes.io/name: openresty-art
+    app.kubernetes.io/instance: release-name    
   ports:
   - port: 80
     targetPort: 80
-
+    name: proxy
 ---
 # Source: openresty-art/templates/deployment.yaml
 apiVersion: apps/v1
@@ -90,7 +92,7 @@ metadata:
   labels:
     helm.sh/chart: openresty-art-0.1.0
     app.kubernetes.io/name: openresty-art
-    app.kubernetes.io/instance: app
+    app.kubernetes.io/instance: release-name
     app.kubernetes.io/version: "1.27.1.2-0-alpine"
     app.kubernetes.io/managed-by: Helm
   annotations:
@@ -101,15 +103,13 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: openresty-art
-      app.kubernetes.io/instance: app
+      app.kubernetes.io/instance: release-name
   template:
     metadata:
       labels:
         app.kubernetes.io/name: openresty-art
-        app.kubernetes.io/instance: app
+        app.kubernetes.io/instance: release-name
     spec:
-      imagePullSecrets:
-        - name: MySecret
       containers:
       - name: art
         image: "openresty/openresty:1.27.1.2-0-alpine"
@@ -118,14 +118,14 @@ spec:
           failureThreshold: 3
           httpGet:
             path: /index.html
-            port: http
+            port: 80
           initialDelaySeconds: 5
           periodSeconds: 10
         readinessProbe:
           failureThreshold: 3
           httpGet:
             path: /index.html
-            port: http
+            port: 80
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
@@ -149,3 +149,33 @@ spec:
         - name: conf
           configMap:
             name: art-conf
+
+---
+# Source: openresty-art/templates/httproute.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  namespace: work
+  name: art-route
+  labels:
+    helm.sh/chart: openresty-art-0.1.0
+    app.kubernetes.io/name: openresty-art
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.27.1.2-0-alpine"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: gateway-infra
+      port: 80
+  hostnames:
+    - app.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: art-svc
+          port: 80
+          weight: 1

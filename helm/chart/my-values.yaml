@@ -3,20 +3,18 @@ fullnameOverride: "art"
 application:
   reloader: true
   podAnnotations: {}
-  imagePullSecrets:
-  - name: MySecret
   probes:
     livenessProbe:
       httpGet:
         path: /index.html
-        port: http
+        port: 80
       initialDelaySeconds: 5
       periodSeconds: 10
       failureThreshold: 3  
     readinessProbe:
       httpGet:
         path: /index.html
-        port: http
+        port: 80
       initialDelaySeconds: 5
       periodSeconds: 10
       failureThreshold: 3
@@ -37,3 +35,31 @@ application:
       configMapSuffix: html
     - name: conf
       configMapSuffix: conf
+
+service:
+  # Service type: ClusterIP, NodePort.
+  type: ClusterIP
+  port: 80 
+  name: "proxy"
+  nodePort: ""
+  targetPort: 80
+
+httpRoute:
+  # HTTPRoute enabled.
+  enabled: true
+  # HTTPRoute annotations.
+  annotations: {}
+  # Which Gateways this Route is attached to.
+  parentRefs:
+  - name: cilium-gateway
+    port: 80
+    namespace: gateway-infra
+  # Hostnames matching HTTP header.
+  hostnames:
+  - app.local
+  # List of rules and filters applied.
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /

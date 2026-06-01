@@ -6,8 +6,15 @@ metadata:
   labels:
     {{- include "openresty-art.labels" . | nindent 4 }}
 spec:
+  type: {{ .Values.service.type }}
   selector:
-    kubernetes.io/name: openresty-art
+  {{- include "openresty-art.selectorLabels" . | nindent 4 }}    
   ports:
-  - port: 80
-    targetPort: 80
+  - port: {{ .Values.service.port }}
+    targetPort: {{ .Values.service.targetPort }}
+    {{- if .Values.service.name }}
+    name: {{ .Values.service.name }}
+    {{- end }}
+    {{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
+    nodePort: {{ .Values.service.nodePort }}
+    {{- end }}

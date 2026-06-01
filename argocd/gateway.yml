@@ -20,7 +20,7 @@ spec:
       mode: Terminate # Cilium (Envoy) сам расшифрует SSL трафик
       certificateRefs:
       - name: argocd-cluster-tls # Наш новый секрет 
-  - name: http
+  - name: app-http
     protocol: HTTP
     port: 80
     allowedRoutes:
