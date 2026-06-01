@@ -24,7 +24,7 @@ spec:
       labels:
         {{- include "openresty-art.selectorLabels" . | nindent 8 }}
     spec:
-      {{- with .Values.application.imagePullSecrets }}
+      {{- if .Values.application.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
