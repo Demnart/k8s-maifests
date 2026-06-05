@@ -63,3 +63,42 @@ httpRoute:
     - path:
         type: PathPrefix
         value: /
+
+conf:
+  default: |
+    server {
+        listen 80;
+        location / {
+            root   /usr/local/openresty/nginx/html;
+            index  index.html index.htm;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   /usr/local/openresty/nginx/html;
+        }
+    }
+
+html:
+  index: |-
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Test page!</title>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <h1>Test page!</h1>
+    </body>
+    </html>
+  50x: |-
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>50x error!</title>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <h1>50x error!</h1>
+    </body>
+    </html>
