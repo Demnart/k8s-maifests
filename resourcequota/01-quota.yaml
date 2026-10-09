@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: test-quota
+  namespace: test
+spec:
+  hard:
+    # Вычислительные квоты
+    requests.cpu: "0.2"
+    requests.memory: "200Mi"
+    limits.cpu: "1"
+    limits.memory: "2Gi"
+    # Квоты на количество ресурсов    
+    pods: "2"
+    services: "2"
+    services.nodeports: "0"
+    # Квоты хранения
+    persistentvolumeclaims: "2"
+    nfs-client.storageclass.storage.k8s.io/requests.storage: "2Gi"
+    nfs-client.storageclass.storage.k8s.io/persistentvolumeclaims: "1"
