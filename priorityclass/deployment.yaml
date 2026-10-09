@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openresty
+  labels: &labels
+    kubernetes.io/name:  openresty
+    kubernetes.io/version: 0.0.1
+spec:
+  replicas: 3
+  selector:
+    matchLabels: *labels
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      priorityClassName: high-priority
+      containers:
+      - name: openresty
+        image: openresty/openresty:alma
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+          requests:
+            memory: "1Gi"
+            cpu: "1"
+        ports:
+        - containerPort: 80
