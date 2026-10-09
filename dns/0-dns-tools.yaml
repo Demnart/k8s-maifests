@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dnstools
+  labels:
+    app.kubernetes.io/name: dnstools
+spec:
+  containers:
+  - name: dnstools
+    image: infoblox/dnstools:latest
+    command:
+      - sleep
+      - "36000"
+    imagePullPolicy: IfNotPresent
+    restartPolicy: Always
+    resources:
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
+      requests:
+        memory: "32Mi"
+        cpu: "50m"
+
