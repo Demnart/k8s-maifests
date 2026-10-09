@@ -1,0 +1,39 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: kubetest
+  name: artiom-role-01
+rules:
+  - apiGroups: [""]
+    resources: ["pods","services", "replicationcontrollers"]
+    verbs: ["list", "create", "get", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["list", "get"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  - apiGroups: ["apps"]
+    resources: ["deployments","daemonsets","replicasets","statefulsets"]
+    verbs: ["list", "create", "get", "update", "delete", "patch", "deploy"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["list", "create", "get", "update", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs","cronjobs"]
+    verbs: ["list", "create", "get", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: artiom-rolebinding
+  namespace: kubetest
+subjects:
+  - kind: User
+    name: artiom
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: artiom-role-01
+  apiGroup: rbac.authorization.k8s.io
