@@ -1,16 +1,19 @@
-apiVersion: gateway.networking.k8s.io/v1
+лы apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: argocd-route
   namespace: argocd
 spec:
+  # Привязываемся к listener'ам ListenerSet, а не к Gateway напрямую
   parentRefs:
-  - name: cilium-gateway
-    namespace: gateway-infra 
-    port: 443 # Указываем HTTPS порт
-  - name: cilium-gateway
-    namespace: gateway-infra
-    port: 80 # Указываем HTTP порт
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: argocd-listenerset
+    sectionName: argocd-https
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: argocd-listenerset
+    sectionName: argocd-http
   hostnames:
   - "argocd.local"
   rules:
