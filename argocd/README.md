@@ -202,7 +202,7 @@ sudo cp local-ca.crt /usr/local/share/ca-certificates/
 sudo update-ca-certificates
 ```
 
-> **Важно!!!** Я устанавливал cert-manager с помощью curl, а не как helm-chart. Для корректной работы с Gateway API при таком типе установки нужно модифицировать Deployment/cert-manager добавив в массив args деплоймента параметр - --enable-gateway-api  
+> **Важно!!!** Я устанавливал cert-manager с помощью curl, а не как helm-chart. Для корректной работы с Gateway API при таком типе установки нужно модифицировать Deployment/cert-manager добавив в массив args деплоймента параметры: --enable-gateway-api --feature-gates=ListenerSets=true --enable-gateway-api-listenerset Эти три флага необходимы для возможности выпуска сертификата при использовании GatewayApi и ListnerSet.
 
 > **kubectl -n cert-manager edit deployment/cert-manager** В манифисте Deployment найти блок containers и в его args добавить выше указанный параметр.После  чего рестартнуть деплоймент cert-manager
 
@@ -231,35 +231,24 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: cilium-gateway
-  namespace: gateway-infra
-  annotations:
-    # Говорим cert-manager автоматически следить за этим гейтвеем и выпускать серты
-    cert-manager.io/cluster-issuer: "local-cluster-issuer"
+  namespace: gateway
 spec:
   gatewayClassName: cilium
+  allowedListeners:
+    namespaces:
+      from: All
   listeners:
-  - name: argocd-https
-    protocol: HTTPS
-    port: 443
-    hostname: "argocd.local" # <-- Указываем hostname для TLS
-    allowedRoutes:
-      namespaces:
-        from: All
-    tls:
-      mode: Terminate # Cilium (Envoy) сам расшифрует SSL трафик
-      certificateRefs:
-      - name: argocd-cluster-tls # Наш новый секрет 
   - name: http
     protocol: HTTP
     port: 80
     allowedRoutes:
       namespaces:
-        from: All
+        from: Same
+
 ```
+Данный gateway предпологает, что мы будем использовать функционал [ListenerSet GatewayAPI](https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/) для разделения управления. Есть gateway который принимает все входящие соединения и есть ListenerSet в каждом отдельном namespace которые уже определяют с каких портов и на какие порты отправлять трафик. Так же на ListenerSet перенесен функционал выпуска TLS сертификатов.
 
-В самом манифесте добавлена аннотация `.metadata.annotations.cert-manager.io/cluster-issuer: local-cluster-issuer` для выпуска сертификатов которые будут указаны в блоке tls. С помощью аннотации cert-manager привязывается к нашему Gateway и отслеживает блок tls. При наличии данного блока происходит выпуск сертификата. Чтобы cert-manager знал для какого домена происходит выпуск мы в `.listeners.argocd-https` добавляем hostname c указанием доменного имени. 
-
-> **Важно** в `allowedRoutes.namespaces.from: All` мы указываем ALL, что позволит подключаться к этому Gateway с любого namespace нашего кластера. Это сделано потому-что мы будем использовать только один Gateway для локального стенда.  
+> **Важно** в `allowedListeners.namespaces.from: All` мы указываем ALL, что позволит подключаться к этому Gateway с любого namespace нашего кластера с епомощью listerset. Это сделано потому-что мы будем использовать только один Gateway для локального стенда.  
 
 Применим манифест: 
 
@@ -270,17 +259,59 @@ kubectl apply -f gateway.yml
 gateway.gateway.networking.k8s.io/cilium-gateway created
 ```
 ```sh 
-kubectl -n gateway-infra  get gateway
+kubectl -n gateway  get gateway
 ```
 ```sh
 NAME             CLASS    ADDRESS          PROGRAMMED   AGE
-cilium-gateway   cilium   192.168.122.10   True         20m
+cilium-gateway   cilium   192.168.122.50   True         20m
 ```
 
-Проверим, что у нас создался секрет типа tls и его содержимое:
+Далее создаем ListenerSet в namespace argocd файл `listenerset.yaml`:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: argocd-listenerset
+  namespace: argocd
+  annotations:
+    # cert-manager (feature gate ListenerSets=true) выпустит сертификат для HTTPS-listener'ов
+    cert-manager.io/cluster-issuer: "local-cluster-issuer"
+spec:
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: cilium-gateway
+    namespace: gateway
+  listeners:
+  - name: argocd-https
+    protocol: HTTPS
+    port: 443
+    hostname: "argocd.local"
+    allowedRoutes:
+      namespaces:
+        from: Same
+    tls:
+      mode: Terminate # Cilium (Envoy) сам расшифрует SSL трафик
+      certificateRefs:
+      - name: argocd-cluster-tls
+  - name: argocd-http
+    protocol: HTTP
+    port: 80
+    hostname: "argocd.local"
+    allowedRoutes:
+      namespaces:
+        from: Same
+
+```
+
+В рамках `ListenerSet` есть блок `parentRef` в котором мы указываем данные нашего gateway, а так же настраиваем `listeners` на порты 443 и 80. Для выпуска сертификата добавляем аннотацию - **cert-manager.io/cluster-issuer: "local-cluster-issuer"** чтобы cert-manager следил за выпуском сертификатов.
+
+> **Важно** В `allowedRoutes.namespaces.from: Same` мы разрешаем роуты только из того же namespace в котором находится ListerSet.
 
 ```sh
-kubectl -n gateway-infra get secret
+kubectl -n argocd get secret
 ```
 ```sh
 NAME                 TYPE                DATA   AGE
@@ -340,16 +371,22 @@ notAfter=Aug 21 10:51:12 2026 GMT
 Файл `argocd-route.yml`:
 
 ```yml
-apiVersion: gateway.networking.k8s.io/v1
+лы apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: argocd-route
   namespace: argocd
 spec:
+  # Привязываемся к listener'ам ListenerSet, а не к Gateway напрямую
   parentRefs:
-  - name: cilium-gateway
-    namespace: gateway-infra 
-    port: 443 # Указываем HTTPS порт
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: argocd-listenerset
+    sectionName: argocd-https
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: argocd-listenerset
+    sectionName: argocd-http
   hostnames:
   - "argocd.local"
   rules:
@@ -360,8 +397,9 @@ spec:
     backendRefs:
     - name: argocd-server
       port: 80 # Внутри кластера Envoy пойдет на 80 порт ArgoCD без TLS
-```
 
+```
+В созданном роуте обязательно указываем в блоке `parentRefs` данные нашего `ListenerSet`.
 Применим манифест: 
 
 ```sh
@@ -383,7 +421,7 @@ argocd-route   ["argocd.local"]   50s
 
 Перед проверкой не забудьте добавить в ваш локальный /etc/hosts домен argocd.local.  
 
-У меня при создании Gateway был выделен IP 192.168.122.10 его я и добавил в `/etc/hosts`.
+У меня при создании Gateway был выделен IP 192.168.122.50 его я и добавил в `/etc/hosts`.
 
 Теперь проверим с помощью curl доступность argocd.local:
 
