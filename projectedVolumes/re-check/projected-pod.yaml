@@ -1,0 +1,63 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: projected-pod
+  labels:
+    app.kubernetes.io/name: projected-pod
+spec:
+  volumes:
+    - name: projected-volume
+      projected:
+        sources:
+          - secret:
+              name: db-credentials
+              items:
+                - key: username
+                  path: username
+                - key: password
+                  path: password
+          - configMap:
+              name: app-config
+              items:
+                - key: app.properties
+                  path: "app.properties"
+          - downwardAPI:
+              items:
+                - path: "pod_name"
+                  fieldRef:
+                    fieldPath: metadata.name
+                - path: "pod_namespace"
+                  fieldRef:
+                    fieldPath: metadata.namespace
+  containers:
+  - name: main-container
+    image: busybox:1.38
+    command: ["/bin/sh", "-c"]
+    args:
+      - |
+        echo "--- Reading projected data ---";
+        echo "[+] Pod Info:";
+        echo "Pod Name: $(cat /etc/projected/pod_name)";
+        echo "";
+        echo "Pod Namespace: $(cat /etc/projected/pod_namespace)";
+        echo "";
+        echo "[+] App Config: ";
+        cat /etc/projected/app.properties;
+        echo "[+] DB Credentials: ";
+        echo "Username: $(cat /etc/projected/username)";
+        echo "Password: $(cat /etc/projected/password)";
+        echo "--- Finished reading projected data ---";
+        sleep infinity;
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+    volumeMounts:
+      - name: projected-volume
+        mountPath: /etc/projected
+        readOnly: true
+  restartPolicy: Never
