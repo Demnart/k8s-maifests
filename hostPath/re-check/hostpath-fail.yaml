@@ -1,0 +1,56 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hostpath-fail-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hostpath-fail
+  template:
+    metadata:
+      labels: 
+        app: hostpath-fail
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                    - hostpath-fail
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: main
+        image: busybox:1.37
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Pod started on node $(NODE_NAME) at $(date)" >> /data/node-specific-data.log;
+          echo "---Current content on node-specific-data.log ---";
+          cat /data/node-specific-data.log;
+          echo "---";
+          sleep infinity;
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: host-data
+          mountPath: /data
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "64Mi"
+          limits:
+            cpu: "500m"
+            memory: "128Mi"
+      volumes:
+      - name: host-data
+        hostPath:
+          path: /tmp/k8s-hostpath-fail
+          type: DirectoryOrCreate      
