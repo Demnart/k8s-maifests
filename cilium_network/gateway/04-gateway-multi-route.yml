@@ -6,6 +6,7 @@ metadata:
 spec:
   parentRefs:
   - name: cilium-gateway
+    namespace: gateway
   hostnames:
   - "test1.rogov.lan"
   rules:
@@ -24,6 +25,7 @@ metadata:
 spec:
   parentRefs:
   - name: cilium-gateway
+    namespace: gateway
   hostnames:
   - "test2.rogov.lan"
   rules:

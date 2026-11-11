@@ -248,7 +248,7 @@ curl -s -o /dev/null -w '%{http_code}' http://192.168.122.10 && echo ""
 Cilium использует механизм **Kubernetes Leases** для leader election. Каждый сервис типа LoadBalancer получает отдельный Lease в namespace ```kube-system```:
 
 ```sh
-kubectl -n kube-system cilium-l2announce-default-lb-test-svc get lease -o yaml
+kubectl get lease -n kube-system cilium-l2announce-work-lb-test-svc -o yaml
 ```
 ```sh
 apiVersion: coordination.k8s.io/v1
