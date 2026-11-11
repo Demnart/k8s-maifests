@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: persistent-volume-deployment
+  labels:
+    kubernetes.io/name:  &name whoami
+    kubernetes.io/version: &version 0.0.1
+    kubernetes.io/intstace: &intstance persistentVolumeDynamic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      kubernetes.io/name: *name
+      kubernetes.io/version: *version
+      kubernetes.io/intstace: *intstance
+  template:
+    metadata:
+      labels:
+        kubernetes.io/name: *name
+        kubernetes.io/version: *version
+        kubernetes.io/intstace: *intstance
+    spec:
+      volumes:
+        - name: persistent-volume-claim
+          persistentVolumeClaim:
+            claimName: persistent-volume-claim
+      containers:
+      - name: busybox
+        image: busybox:1.38
+        command: ["sh", "-c"]
+        args:
+          - |
+            while true; do
+              echo "Log entry at $(date)" >> /data/log.txt
+              sleep 5
+            done
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+        volumeMounts:
+          - name: persistent-volume-claim
+            mountPath: /data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: persistent-volume-claim
+spec:
+  resources:
+    requests:
+      storage: 50Mi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-client
+
+
