@@ -8,7 +8,7 @@ metadata:
 spec:
   project: system-utils
   source:
-    repoURL: 'https://github.com/Demnart/k8s-maifests/'
+    repoURL: 'https://github.com/Demnart/k8s-maifests'
     path: argocd/re-check/clusterapps/gateway
     targetRevision: HEAD
   destination:
