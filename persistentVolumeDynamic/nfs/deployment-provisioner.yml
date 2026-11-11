@@ -28,9 +28,9 @@ spec:
             - name: PROVISIONER_NAME
               value: artiom.local/nfs
             - name: NFS_SERVER
-              value: 192.168.122.193
+              value: 192.168.122.62
             - name: NFS_PATH
-              value: /volume1/nfs
+              value: /volume/nfs
           resources:
             requests:
               cpu: 10m
@@ -41,5 +41,5 @@ spec:
       volumes:
         - name: nfs-client-root
           nfs:
-            server: 192.168.122.193
-            path: /volume1/nfs
+            server: 192.168.122.62
+            path: /volume/nfs
