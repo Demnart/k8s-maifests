@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: system-utils
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: System utilities project
+  sourceRepos:
+    - 'https://github.com/Demnart/k8s-maifests'
+  destinations:
+    - server: 'https://kubernetes.default.svc'
+      namespace: '*'
