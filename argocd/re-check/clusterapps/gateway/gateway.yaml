@@ -1,19 +1,17 @@
-apiVersion: argoproj.io/v1alpha1
-kind: Application
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
 metadata:
-  name: gateway
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  name: cilium-gateway
+  namespace: gateway
 spec:
-  project: system-utils
-  source:
-    repoURL: 'https://github.com/Demnart/k8s-maifests/'
-    path: argocd/clusterapps/gateway
-    targetRevision: HEAD
-  destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: gateway
-  syncPolicy:
-    syncOptions:
-      - CreateNamespace=true
+  gatewayClassName: cilium
+  allowedListeners:
+    namespaces:
+      from: All
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+    allowedRoutes:
+      namespaces:
+        from: Same
