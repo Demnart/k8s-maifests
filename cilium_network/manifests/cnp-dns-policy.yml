@@ -14,6 +14,9 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
     - toEndpoints:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": kube-system
@@ -26,7 +29,7 @@ spec:
             dns:
               - matchPattern: "*"
     - toFQDNs:
-        - matchPattern: "*ya.ru"
+        - matchPattern: "*.ya.ru"
         - matchName: "ya.ru"
       toPorts:
         - ports:
