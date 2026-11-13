@@ -1,0 +1,33 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: keycloakx-listenerset
+  namespace: keycloackx
+  annotations:
+    # cert-manager (feature gate ListenerSets=true) выпустит сертификат для HTTPS-listener'ов
+    cert-manager.io/cluster-issuer: "local-cluster-issuer"
+spec:
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: cilium-gateway
+    namespace: gateway
+  listeners:
+  - name: keycloakx-https
+    protocol: HTTPS
+    port: 443
+    hostname: "keycloakx.local"
+    allowedRoutes:
+      namespaces:
+        from: Same
+    tls:
+      mode: Terminate # Cilium (Envoy) сам расшифрует SSL трафик
+      certificateRefs:
+      - name: keycloakx-cluster-tls
+  - name: keycloakx-http
+    protocol: HTTP
+    port: 80
+    hostname: "keycloakx.local"
+    allowedRoutes:
+      namespaces:
+        from: Same
