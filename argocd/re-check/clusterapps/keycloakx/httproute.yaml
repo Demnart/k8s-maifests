@@ -1,0 +1,26 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: keycloakx-route
+  namespace: keycloackx
+spec:
+  # Привязываемся к listener'ам ListenerSet, а не к Gateway напрямую
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: keycloakx-listenerset
+    sectionName: keycloakx-https
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: keycloakx-listenerset
+    sectionName: keycloakx-http
+  hostnames:
+  - "keycloakx.local"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: keycloak
+      port: 8080
