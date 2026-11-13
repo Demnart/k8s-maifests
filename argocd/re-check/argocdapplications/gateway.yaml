@@ -15,5 +15,9 @@ spec:
     server: 'https://kubernetes.default.svc'
     namespace: gateway
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      enabled: true
     syncOptions:
       - CreateNamespace=true
