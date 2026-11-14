@@ -1,0 +1,22 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: openresty
+data:
+  index.html: |
+    <html>
+    <head>
+        <title>Тестовая страница</title>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+      <h1>Тестовая страница</h1>
+
+      <p>Вот тут мы подставляем данные из hashicorp vault:</p>
+      <p>Приложение: <b>$APPLICATION_FROM_VAULT</b> </p>
+      <p>Пользователь: <b>$USER_FROM_VAULT</b> </p>
+      <p>Пароль: <b>$PASSWORD_FROM_VAULT</b> </p>
+
+    </body>
+    </html>
