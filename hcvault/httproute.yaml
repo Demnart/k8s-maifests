@@ -1,0 +1,26 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: vault-route
+  namespace: vault
+spec:
+  # Привязываемся к listener'ам ListenerSet, а не к Gateway напрямую
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: vault-listenerset
+    sectionName: vault-https
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: vault-listenerset
+    sectionName: vault-http
+  hostnames:
+  - "vault.local"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: vault-ui
+      port: 8200 # Внутри кластера Envoy пойдет на 80 порт ArgoCD без TLS
