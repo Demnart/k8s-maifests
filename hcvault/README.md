@@ -282,6 +282,267 @@ ttl=120m
 
 Те если в vault поступит запрос от приложения, которое использует `serviceaccount` с именем `application-sa`, `serviceaccount` расположен в namespace `work`, то ему будет присвоена политика `internal-app ` позволяющая читать наш созданный секрет.
 
+
+## Secrets Store CSI Driver
+
+Secrets Store CSI Driver необходим для безопасной доставки внешних секретов, паролей, ключей и сертификатов внутрь подов Kubernetes в виде подключаемых томов (volumes). По факту это набор CRD который мы устанавливаем в кластер и потом можем настраивать. 
+
+Я устанавливаю `SSCSID` с помощью `helm чарта и argocd` - файл `argocd-app/csi.yaml`. В этом файле добавляем в проект `default` необходимые CRD указав в качестве репозитория url чарта Secrets Store CSI Driver.
+
+Почему проект `default`. CRD из чарта устанавливаются в kube-system, кроме `CRD` в чарте так же поставлется `daemonSet` - `csi-secrets-store-secrets-store-csi-driver` который устанавливает поды на каждой ноде + так же устанавливаются `Role/RoleBinding` и `ClusterRole/ClusterRoleBinding`. 
+
+Тк проект `default` в `WhiteList` имеет `kind: *`  и `group: *` это позволяет не заморачиваться с настройкой разрешений и установить все необходимое. 
+
+Сам манифест имеет вид:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: storage-csi
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    path: ''
+    repoURL: https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+    targetRevision: 1.6.2
+    chart: secrets-store-csi-driver
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: ''
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      enabled: true
+
+```
+
 ## Настройка приложения 
 
-TBD
+Само приложение, которое мы будем использовать `manifests/openresty-deployment.yaml` это `openresty` который выведет дефолтную страницу, которую мы ему передадим.
+
+Сам манифест имеет вид:
+
+```yaml
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: application-sa
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: openresty
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    k8s-app: openresty
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: openresty
+  labels:
+    k8s-app: openresty
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      k8s-app: openresty
+  template:
+    metadata:
+      labels:
+        k8s-app: openresty
+    spec:
+      #### Добавлен для работы vault
+      serviceAccountName: application-sa
+      initContainers:
+        - name: prepare
+          image: busybox:1.38.0
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - sh
+            - -c
+            - |
+              sed -e "s/\$APPLICATION_FROM_VAULT/$(cat /mnt/secrets-store/application)/" \
+                  -e "s/\$USER_FROM_VAULT/$(cat /mnt/secrets-store/user)/" \
+                  -e "s/\$PASSWORD_FROM_VAULT/$(cat /mnt/secrets-store/password)/" \
+                  /mnt-template/index.html > /mnt/index.html
+              echo "Done"
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+            - name: config
+              mountPath: "/mnt"
+            - name: config-template
+              mountPath: "/mnt-template"
+      containers:
+        - name: openresty
+          image: openresty/openresty:centos-rpm
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: "0.2"
+              memory: "400Mi"
+            requests:
+              cpu: "0.1"
+              memory: "200Mi"
+          volumeMounts:
+            - name: config
+              mountPath: /usr/local/openresty/nginx/html/
+      volumes:
+        - name: config-template
+          configMap:
+            name: openresty
+        - name: config
+          emptyDir:
+            medium: Memory
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "vault-application"
+```
+
+Что важно в манифесте: 
+
+- Создается `ServiceAccount` с именем `application-sa`, таким же именем, которое мы настроили в нашей роли в vault в методе аутентификации `kubernetes`. 
+- `ServiceAccount` применяется к нашим подам в разделе `spec`
+- В `Deployement` есть три `volumes`, первый это шаблон index.html страницы созданной для openresty, второй `emptyDir` для передачи готового файла index.html в под `openresty`, `emptyDir` используем типа `Memory` те данные будут хранится в памяти и секреты не появятся в основном контейнере openresty нигде на дисковой подсистеме. Есть третий `volume` с именем `secrets-store-inline` это наш `csi` из которого мы получим секерты из `Vault`.
+
+
+Шаблон нашего `index.html` представлен как `ConfigMap` файл `manifests/configmap.yaml`:
+
+```yaml
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: openresty
+data:
+  index.html: |
+    <html>
+    <head>
+        <title>Тестовая страница</title>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+      <h1>Тестовая страница</h1>
+
+      <p>Вот тут мы подставляем данные из hashicorp vault:</p>
+      <p>Приложение: <b>$APPLICATION_FROM_VAULT</b> </p>
+      <p>Пользователь: <b>$USER_FROM_VAULT</b> </p>
+      <p>Пароль: <b>$PASSWORD_FROM_VAULT</b> </p>
+
+    </body>
+    </html>
+```
+
+И самый важный в данном случае, это файл `manifests/csi.yaml`:
+
+```sh
+apiVersion: secrets-store.csi.x-k8s.io/v1alpha1
+kind: SecretProviderClass
+metadata:
+  name: vault-application
+spec:
+  provider: vault
+  parameters:
+    vaultAddress: "http://vault.vault.svc:8200"
+    roleName: "application"
+    objects: |
+      - objectName: "application"
+        secretPath: "secret/data/application"
+        secretKey: "application"
+      - objectName: "user"
+        secretPath: "secret/data/application"
+        secretKey: "user"
+      - objectName: "password"
+        secretPath: "secret/data/application"
+        secretKey: "password"
+```
+
+В этом файле мы создаем `kind: SecretProviderClass` это объект добавленного ранее нами `Secrets Store CSI Driver`, т.е. без установки этого CRD у нас бы ничего не сработало. 
+
+Теперь подробнее по содержимому:
+
+- **provider: vault** - тип провайдера, тк используется `Vault` указываем vault.
+- **vaultAddress: "http://vault.vault.svc:8200"** - адрес сервиса `vault` который был добавлен при установки `HC Vault`. Те имя сервиса `vault.` его namespace `vault.` и тип `svc.` по факту если бы захотели FQDN то адрес бы имел вид `vault.vault.svc.cluster.local`
+- **roleName: "application"** - роль которую мы добавили в метод аутентификации kubernetes
+- **objects** - массив с данными, где:
+  - **secretPath** - путь до секрета в `Vault`. Помним, что из-за особенностей типа хранилища kv-v2, всегда нужно указывать в пути `/data/`
+  - **secretKey** - ключ который мы добавили в созданный секрет, по факту по ключу мы получаем значения
+  - **objectName** - объект, который будет создан, грубо говоря в нашем случае будет создан файл с содержимым секрета указанного в `secretKey`
+
+### Запуск приложения
+
+Запустить приложение можно двумя способами: 
+
+1. Просто выполнить команду:
+
+```sh
+kubectl -n work apply -f manifests/
+```
+
+В этом случае применятся все файлы распололженные в директории manifests
+
+2. С помощью `argo-cd`. Для этого в директории `argo-app/application-app.yaml` было создано приложение argo-cd с таким содержимым:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: application
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/Demnart/k8s-maifests'
+    path: hcvault/manifests
+    targetRevision: HEAD
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: work
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      enabled: true
+    syncOptions:
+      - CreateNamespace=true
+```
+
+После чего примеяем приложение в кластере:
+
+```sh
+kubectl apply -f argo-app/application-app.yaml 
+```
