@@ -546,3 +546,383 @@ spec:
 ```sh
 kubectl apply -f argo-app/application-app.yaml 
 ```
+
+## External Secrets Operator
+
+External Secrets Operator (ESO) — это Kubernetes-оператор, который синхронизирует секреты из внешних систем управления (хранилищ) в стандартные нативные объекты Secret внутри кластера Kubernetes.
+
+Установку ESO производил с помощью helm по инструкции [ESO getting started](https://external-secrets.io/latest/introduction/getting-started/)
+
+После установки `ESO` можем проверить ресурсы, которые были установлены с помощью команды: 
+
+```sh
+kubectl -n external-secrets get all
+```
+```sh
+NAME                                                    READY   STATUS    RESTARTS   AGE
+pod/external-secrets-68c5b95f44-6v2h5                   1/1     Running   0          77m
+pod/external-secrets-cert-controller-5c986cfd69-2gvmm   1/1     Running   0          77m
+pod/external-secrets-webhook-74f5789fdc-24jps           1/1     Running   0          77m
+
+NAME                               TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/external-secrets-webhook   ClusterIP   10.96.210.241   <none>        443/TCP   77m
+
+NAME                                               READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/external-secrets                   1/1     1            1           77m
+deployment.apps/external-secrets-cert-controller   1/1     1            1           77m
+deployment.apps/external-secrets-webhook           1/1     1            1           77m
+
+NAME                                                          DESIRED   CURRENT   READY   AGE
+replicaset.apps/external-secrets-68c5b95f44                   1         1         1       77m
+replicaset.apps/external-secrets-cert-controller-5c986cfd69   1         1         1       77m
+replicaset.apps/external-secrets-webhook-74f5789fdc  
+```
+
+Помимо деплойментов, так же был установлен набор CRD который можно проверить таким образом: 
+
+```sh
+kubectl get crd | grep external
+```
+```sh
+acraccesstokens.generators.external-secrets.io                                Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+beyondtrustworkloadcredentialsdynamicsecrets.generators.external-secrets.io   Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+cloudsmithaccesstokens.generators.external-secrets.io                         Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+clusterexternalsecrets.external-secrets.io                                    Cluster      v1(storage)                     2026-11-16T18:05:45Z
+clustergenerators.generators.external-secrets.io                              Cluster      v1alpha1(storage)               2026-11-16T18:05:45Z
+clusterpushsecrets.external-secrets.io                                        Cluster      v1alpha1(storage)               2026-11-16T18:05:45Z
+clustersecretstores.external-secrets.io                                       Cluster      v1(storage)                     2026-11-16T18:05:45Z
+ecrauthorizationtokens.generators.external-secrets.io                         Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+externalsecrets.external-secrets.io                                           Namespaced   v1(storage)                     2026-11-16T18:05:45Z
+fakes.generators.external-secrets.io                                          Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+gcraccesstokens.generators.external-secrets.io                                Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+generatorstates.generators.external-secrets.io                                Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+githubaccesstokens.generators.external-secrets.io                             Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+gitlabdeploytokens.generators.external-secrets.io                             Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+grafanas.generators.external-secrets.io                                       Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+mfas.generators.external-secrets.io                                           Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+passwords.generators.external-secrets.io                                      Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+pushsecrets.external-secrets.io                                               Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+quayaccesstokens.generators.external-secrets.io                               Namespaced   v1alpha1(storage)               2026-11-16T18:05:45ZG
+secretstores.external-secrets.io                                              Namespaced   v1(storage)                     2026-11-16T18:05:45Z
+sshkeys.generators.external-secrets.io                                        Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+stssessiontokens.generators.external-secrets.io                               Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+uuids.generators.external-secrets.io                                          Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+vaultdynamicsecrets.generators.external-secrets.io                            Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+webhooks.generators.external-secrets.io                                       Namespaced   v1alpha1(storage)               2026-11-16T18:05:45Z
+```
+
+После установки `ESO` так же как и для `CSI` необходимо в `vault` создать политики и роль для типа авторизации kubernetes.
+
+### Vault policy and role for ESO
+
+для начала провалимся в pod нашего `sts vault-0`:
+
+```sh
+kubectl -n vault exec -it vault-0 -- /bin/sh
+```
+
+После авторизиемся с помощью нашего токена: 
+
+```sh
+vault login
+```
+```sh
+Token (will be hidden): 
+```
+
+Так же как и для `CSI` сначала создадим политику с именем `eso-read`: 
+```sh
+vault policy write eso-read - <<'EOF'
+path "secret/data/*" {
+  capabilities = ["read"]
+}
+path "secret/metadata/*" {
+  capabilities = ["read", "list"]
+}
+EOF
+```
+
+По факту данная политика дает нам доступ ко всем данным(секретам) расположенным в созданном хранилище secret.
+
+Теперь настроим новую роль в методе авторизации kubernetes:
+
+```sh
+kubectl -n vault exec vault-0 -- vault write auth/kubernetes/role/eso \
+  bound_service_account_names=external-secrets \
+  bound_service_account_namespaces=external-secrets \
+  policies=eso-read \
+  audience=vault \
+  ttl=1h
+```
+
+> ***Важно!!!** в рамках текущей установки используется ServiceAccount созданный при установке ESO с помощью helm. Это сделанно намеренно, т.к. кластер локальный и в качестве storage я буду использовать ClusterSecretStore, т.е. ресурс доступный для всего кластера. Если будет использоваться ресурс SecretStore то он namespace зависимый и рекомендуется создавать отдельный ServiceAccount для него и указывать конкретный namespace откуда мы ожидаем его получить.
+
+Итак политика и роль для авторизации `kubernetes` готовы, теперь можно приступить к непосредственному написанию манифестов из CRD ESO.
+
+### CluseterSecretStore and ExternalSecret
+
+Для начала нам нужно создать так называемый `backend` т.е. указать оператору `ESO` где именно он должен брать секреты. 
+
+Описание `ClusterSecretStore` находится в файле `external-secret/clusterSecretStore.yaml`:
+
+```yaml
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: vault-backend
+spec:
+  provider:
+    vault:
+      server: "http://vault.vault.svc:8200"
+      path: "secret"
+      version: "v2"
+      auth:
+        kubernetes:
+          mountPath: "kubernetes"
+          role: "eso"
+          serviceAccountRef:
+            name: external-secrets
+            namespace: external-secrets
+            audiences: ["vault"]
+```
+
+Итак что нас интересует в данном манифесте:
+
+- `kind: ClusterSecretStore` - тип нашего ресурса ClusterSecretStore - распотраняется на весь кластер, т.е. любой созданный в любом namespace объект типа `ExternalSecret` сможет указать его как своего родителя.
+- `spec.provider.vault` - указываем, что мы используем Vault как хранилище к которому необходимо подключиться. 
+- `server: "http://vault.vault.svc:8200"` - адрес нашего Vault, т.к. Vault расположен непосредственно в кластере, то указываем FQDN его сервиса для подключения
+- `path: "secret"` - путь до нашего хранилища секретов. 
+- `version: "v2"` - версия хранилища, вспоминаем, что мы создавали хранилище типа `kv-v2`
+- `spec.provider.vault.auth` - указываем:
+  - `kubernetes` - тип авторизации настроенной в vault
+  - `mountPath: "kubernetes"` - точка монтирования, совпадает с типом.
+  - `role: "eso"` - роль добавленную для авторизации `kubernetes` с привязанной политикой
+  - `serviceAccountRef` - указываем имя ServiceAccount `name: external-secrets` и namespace `namespace: external-secrets`. `audiences: ["vault"]` добавлен, для проверки jwt-токенов, он так же был добавлен нами при создании роли.
+
+Добавляем `ClusterSecretStore` в кластер:
+```sh
+kubectl apply -f external-secret/clusterSecretStore.yaml
+```
+```sh
+clustersecretstore.external-secrets.io/vault-backend created
+```
+
+Проверить, что ClusterSecretStore создан можно командой:
+
+```sh
+kubectl get clustersecretstore.external-secrets.io/vault-backend
+```
+```sh
+NAME            AGE   STATUS   CAPABILITIES   READY
+vault-backend   51m   Valid    ReadWrite      True
+```
+
+> **Важно!** в CAPABILITIES видно ReadWrite **НО** это возможности самого оператора ESO. Что в реальности будет возможно делать с секретами определяется политикой Vault. Созданная нами политика позволяет только читать данные, читать/получать метаданные. 
+
+Итак, `ClusterSecretStore` настроен, а именно успешно подключился к нашему vault и получил по выданной роли доступ к хранилищу секретов secret. 
+
+Но как нам получить нужные нам секреты? Для этого необходимо создать еще один объект но уже типа `ExternalSecret`.
+
+Файл манифеста `external-secret/external-secret.yaml`:
+```yaml
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: vault-secret
+  namespace: work
+spec:
+  refreshInterval: "180s"
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: vault-secret
+  dataFrom:
+    - extract:
+        key: "kubernetes/test/env-secret"
+```
+
+В манифесте:
+
+- `namespace: work` - ExternalSecret namespace зависимый ресурс, т.е. мы указываем в каком конкретном namespace необходимо его создать
+- `spec.refreshInterval: "180s"` - раз в сколько секунд оператор будет обращаться в `vault` для проверки секретов.
+- `spec.secretStoreRef` - в этом блоке мы указываем `родителя` который подключился к `Vault`
+- `spec.target` - имя секрета, который создаться в API Kubernetes
+- `spec.dataFrom.extract.key` - путь до нашего файла с секретами в Vault. Путь имеет вид `"kubernetes/test/env-secret"` потому, что в `ClusterSecretStore` мы уже ранее указали путь до хранилища `secret`. В ExternalSecret при таком варинте подключения, будут добавлены все ключи/значения хранящиеся в файле env-secret
+
+Применим манифест:
+
+```sh
+kubectl apply -f external-secret/external-secret.yaml 
+```
+Проверить добавленный ExternalSecret можно так:
+```sh
+kubectl -n work get ExternalSecret
+```
+```sh
+NAME           STORETYPE            STORE           REFRESH INTERVAL   STATUS         READY   LAST SYNC
+vault-secret   ClusterSecretStore   vault-backend   180s               SecretSynced   True    55s
+```
+
+А теперь самое важное, как именно мы можем получить в наш под секреты? 
+Для этого я немного переделал deployment openresty, который ранее использовался для `CSI` - файл манифеста - `manifests/openresty-es-deployment.yaml`
+
+```yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: openresty
+  namespace: work
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    k8s-app: openresty
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: openresty
+  namespace: work
+  labels:
+    k8s-app: openresty
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      k8s-app: openresty
+  template:
+    metadata:
+      labels:
+        k8s-app: openresty
+    spec:
+      initContainers:
+        - name: prepare
+          image: busybox:1.38.0
+          imagePullPolicy: "IfNotPresent"
+          envFrom:
+            - secretRef:
+                name: vault-secret
+          command:
+            - sh
+            - -c
+            - |
+              sed -e "s/\$APPLICATION_FROM_VAULT/$APP_NAME/" \
+                  -e "s/\$USER_FROM_VAULT/$APP_USER/" \
+                  -e "s/\$PASSWORD_FROM_VAULT/$APP_PASSWORD/" \
+                  /mnt-template/index.html > /mnt/index.html
+              echo "Done"
+          volumeMounts:
+            - name: config
+              mountPath: "/mnt"
+            - name: config-template
+              mountPath: "/mnt-template"
+      containers:
+        - name: openresty
+          image: openresty/openresty:1.27.1.2-13-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: "0.2"
+              memory: "400Mi"
+            requests:
+              cpu: "0.1"
+              memory: "200Mi"
+          volumeMounts:
+            - name: config
+              mountPath: /usr/local/openresty/nginx/html/
+      volumes:
+        - name: config-template
+          configMap:
+            name: openresty
+        - name: config
+          emptyDir:
+            medium: Memory
+```
+
+Итак основные отличия: 
+
+1. ServiceAccount не нужен, мы указываем его непосредственно в ClusterSecretStore
+2. Не нужно монтировать отдельный том для секретов, хотя если это необходимо, это возможно сделать, чтобы наши секреты в поде хранились в качестве файлов.
+3. Подключение к поду, производится как и с обычными секретами:
+```yaml
+          envFrom:
+            - secretRef:
+                name: vault-secret
+```
+
+Т.е. мы берем все данные из секрета и они помещаются как env переменные в InitContainer. Так же как и в deployment `CSI` наши секреты не будут видны в основном контейнере, т.к. подключаются только в InitContainer.
+
+Для проверки, применим ConfigMap и наш новый Deployment:
+```sh
+kubectl -n work apply -f manifests/configmap.yaml,manifests/openresty-es-deployment.yaml 
+```
+
+После чего можно проверить все созданные ресурсы: 
+
+```sh
+kubectl -n work get all
+```
+```sh
+NAME                             READY   STATUS    RESTARTS   AGE
+pod/openresty-7f9cf77565-glnhx   1/1     Running   0          19s
+pod/openresty-7f9cf77565-gpnbz   1/1     Running   0          19s
+
+NAME                TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+service/openresty   ClusterIP   10.104.135.237   <none>        80/TCP    19s
+
+NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/openresty   2/2     2            2           19s
+
+NAME                                   DESIRED   CURRENT   READY   AGE
+replicaset.apps/openresty-7f9cf77565   2         2         2       19s
+```
+
+А теперь зайдем на любую ноду кластера и выполним curl на IP адрес сервиса:
+```sh
+curl 10.104.135.237
+```
+```sh
+<html>
+<head>
+    <title>Тестовая страница</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+  <h1>Тестовая страница</h1>
+
+  <p>Вот тут мы подставляем данные из hashicorp vault:</p>
+  <p>Приложение: <b>App from vault</b> </p>
+  <p>Пользователь: <b>Vasea</b> </p>
+  <p>Пароль: <b>MEGAPASSWORD</b> </p>
+
+</body>
+</html>
+
+```
+
+Данные помещенные в `Vault` успешно были переданы к нам в под.
+
+> **Важно!** - ESO обновляет Secret раз в refreshInterval (у тебя 180 секунд). Дальше всё зависит от способа подключения:
+>  - переменные окружения (env/envFrom) не обновляются, пока под не перезапустится;
+>  - volume обновляется сам примерно за минуту, но приложение должно перечитать файл.
+
+Если нужен автоматический перезапуск при смене секрета, обычно ставят Reloader (stakater) и добавляют аннотацию на Deployment.
