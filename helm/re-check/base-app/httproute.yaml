@@ -1,0 +1,26 @@
+лы apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd-route
+  namespace: argocd
+spec:
+  # Привязываемся к listener'ам ListenerSet, а не к Gateway напрямую
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: argocd-listenerset
+    sectionName: argocd-https
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: argocd-listenerset
+    sectionName: argocd-http
+  hostnames:
+  - "argocd.local"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: argocd-server
+      port: 80 # Внутри кластера Envoy пойдет на 80 порт ArgoCD без TLS
