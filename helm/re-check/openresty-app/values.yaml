@@ -28,7 +28,91 @@ deployment:
         port: http
   resources: {}
   volumeMounts: []
+  ports: []
 
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  port: 80
+  targetPort: 80
+
+# -- Expose the service via gateway-api HTTPRoute
+# Requires Gateway API resources and suitable controller installed within the cluster
+# (see: https://gateway-api.sigs.k8s.io/guides/)
+httpRoute:
+  # HTTPRoute enabled.
+  enabled: false
+  # HTTPRoute annotations.
+  namespace: ""
+  annotations: {}
+  # Which Gateways this Route is attached to.
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: "" #May be Gateway or ListenerSet
+    name: "" # ListenerSet name
+    sectionName: "" #May be empty or a section name of the Gateway or ListenerSet
+    # namespace: default
+  # Hostnames matching HTTP header.
+  hostnames:
+  - chart-example.local
+  # List of rules and filters applied.
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: ""
+      port: 80
+  #   filters:
+  #   - type: RequestHeaderModifier
+  #     requestHeaderModifier:
+  #       set:
+  #       - name: My-Overwrite-Header
+  #         value: this-is-the-only-value
+  #       remove:
+  #       - User-Agent
+  # - matches:
+  #   - path:
+  #       type: PathPrefix
+  #       value: /echo
+  #     headers:
+  #     - name: version
+  #       value: v2
+
+listenerSet:
+  # ListenerSet enabled.
+  enabled: false
+  # ListenerSet annotations.
+  namespace: ""
+  annotations: {}
+  # Which Gateways this Route is attached to.
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: ""
+    namespace: ""
+  listeners:
+  - name: ""
+    protocol: HTTPS
+    port: 443
+    hostname: "chart-example.local"
+    allowedRoutes:
+      namespaces:
+        from: Same
+    tls:
+      mode: "" # Cilium (Envoy) сам расшифрует SSL трафик
+      certificateRefs:
+      - name: "" # Only if installed cert-manager and created a ClusterIssuer or Issuer resource for TLS certificate management
+  - name: ""
+    protocol: HTTP
+    port: 80
+    hostname: "chart-example.local"
+    allowedRoutes:
+      namespaces:
+        from: Same
 
 # This is to override the chart name.
 nameOverride: ""
@@ -63,12 +147,6 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
-# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
-service:
-  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
-  type: ClusterIP
-  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  port: 80
 
 # This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:
@@ -87,43 +165,7 @@ ingress:
     #   hosts:
     #     - chart-example.local
 
-# -- Expose the service via gateway-api HTTPRoute
-# Requires Gateway API resources and suitable controller installed within the cluster
-# (see: https://gateway-api.sigs.k8s.io/guides/)
-httpRoute:
-  # HTTPRoute enabled.
-  enabled: false
-  # HTTPRoute annotations.
-  annotations: {}
-  # Which Gateways this Route is attached to.
-  parentRefs:
-  - name: gateway
-    sectionName: http
-    # namespace: default
-  # Hostnames matching HTTP header.
-  hostnames:
-  - chart-example.local
-  # List of rules and filters applied.
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /headers
-  #   filters:
-  #   - type: RequestHeaderModifier
-  #     requestHeaderModifier:
-  #       set:
-  #       - name: My-Overwrite-Header
-  #         value: this-is-the-only-value
-  #       remove:
-  #       - User-Agent
-  # - matches:
-  #   - path:
-  #       type: PathPrefix
-  #       value: /echo
-  #     headers:
-  #     - name: version
-  #       value: v2
+
 
 
   # We usually recommend not to specify default resources and to leave this as a conscious

@@ -14,6 +14,6 @@ version: 0.1.0
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "openresty:1.27.1.2-13-alpine"
+appVersion: "1.27.1.2-13-alpine"
 
 kubeVersion: ">=1.36.0-0"
