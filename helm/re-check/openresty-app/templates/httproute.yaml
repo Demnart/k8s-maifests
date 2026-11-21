@@ -1,26 +1,34 @@
-лы apiVersion: gateway.networking.k8s.io/v1
+{{- if .Values.httpRoute.enabled -}}
+{{- $fullName := include "openresty-app.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+{{- $svcName := printf "%s-%s" $fullName "service" -}}
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: {{ include "openresty-app.fullname" . }}-httproute
-  namespace: argocd
+  namespace: {{ .Release.Namespace }}
 spec:
-  # Привязываемся к listener'ам ListenerSet, а не к Gateway напрямую
   parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: argocd-listenerset
-    sectionName: argocd-https
-  - group: gateway.networking.k8s.io
-    kind: ListenerSet
-    name: argocd-listenerset
-    sectionName: argocd-http
+  {{- with .Values.httpRoute.parentRefs }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.httpRoute.hostnames }}
   hostnames:
-  - "argocd.local"
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    backendRefs:
-    - name: argocd-server
-      port: 80 # Внутри кластера Envoy пойдет на 80 порт ArgoCD без TLS
+    {{- range .Values.httpRoute.rules }}
+    {{- with .matches }}
+    - matches:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .filters }}
+      filters:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}
+      backendRefs:
+        - name: {{ $svcName }}
+          port: {{ $svcPort }}
+          weight: 1
+    {{- end }}
+{{- end }}

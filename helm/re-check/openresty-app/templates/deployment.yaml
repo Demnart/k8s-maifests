@@ -3,6 +3,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: {{ include "openresty-app.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
      {{- include "openresty-app.labels" . | nindent 4 }}
   {{- with .Values.deployment.annotations }}
@@ -13,11 +14,12 @@ spec:
   replicas: {{ .Values.deployment.replicaCount }}
   revisionHistoryLimit: {{ .Values.deployment.revisionHistoryLimit }}
   selector:
-    {{- include "openresty-app.selectorLabels" . | nindent 6 }}
+    matchLabels:
+      {{- include "openresty-app.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "openresty-app.labels" . | nindent 8 }}
+        {{- include "openresty-app.selectorLabels" . | nindent 8 }}
       {{- with .Values.deployment.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
@@ -32,8 +34,10 @@ spec:
           image: {{ .Values.deployment.image.repository }}:{{ .Values.deployment.image.tag }}
           imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
           ports:
-            - containerPort: 80
-              name: http
+          {{- range .Values.deployment.ports }}
+          - name: {{ .name }}
+            containerPort: {{ .containerPort }}
+          {{- end }}
           {{- with .Values.deployment.probes.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

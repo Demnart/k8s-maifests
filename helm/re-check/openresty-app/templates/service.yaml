@@ -2,11 +2,13 @@ kind: Service
 apiVersion: v1
 metadata:
   name: {{ include "openresty-app.fullname" . }}-service
+  namespace: {{  .Release.Namespace }}
   labels:
     {{- include "openresty-app.labels" . | nindent 4 }}
 spec:
+  type: {{ .Values.service.type }}
   ports:
-    - port: 80
-      targetPort: 80
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
   selector:
-    k8s-app: openresty
+{{- include "openresty-app.selectorLabels" . | nindent 4 }}

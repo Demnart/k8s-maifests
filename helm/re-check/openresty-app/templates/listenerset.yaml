@@ -1,35 +1,36 @@
+{{- if .Values.listenerSet.enabled -}}
+{{- $fullName := include "openresty-app.fullname" . -}}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
 metadata:
   name: {{ include "openresty-app.fullname" . }}-listenerset
-  namespace: argocd
+  namespace: {{ .Release.Namespace }}
+  {{- with .Values.listenerSet.annotations }}
   annotations:
-    # cert-manager (feature gate ListenerSets=true) выпустит сертификат для HTTPS-listener'ов
-    cert-manager.io/cluster-issuer: "local-cluster-issuer"
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   parentRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: cilium-gateway
-    namespace: gateway
+  {{- with .Values.listenerSet.parentRef }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   listeners:
-  - name: argocd-https
-    protocol: HTTPS
-    port: 443
-    hostname: "argocd.local"
+  {{- range .Values.listenerSet.listeners }}
+  - name: {{ .name }}
+    protocol: {{ .protocol }}
+    port: {{ .port }}
+    hostname: {{ .hostname }}
     allowedRoutes:
       namespaces:
-        from: Same
+        from: {{ .allowedRoutes.namespaces.from }}
+    {{- with .tls }}
     tls:
-      mode: Terminate # Cilium (Envoy) сам расшифрует SSL трафик
+      mode: {{ .mode }}
+      {{- with .certificateRefs }}
       certificateRefs:
-      - name: argocd-cluster-tls
-  # hostname обязателен: без него listener конфликтует с listener'ом http:80 самого Gateway
-  - name: argocd-http
-    protocol: HTTP
-    port: 80
-    hostname: "argocd.local"
-    allowedRoutes:
-      namespaces:
-        from: Same
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
