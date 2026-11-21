@@ -114,6 +114,55 @@ listenerSet:
       namespaces:
         from: Same
 
+conf:
+  default: |
+    server {
+    listen       80;
+    server_name  localhost;
+
+    location / {
+        root   /usr/local/openresty/nginx/html;
+        index  index.html index.htm;
+    }
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/local/openresty/nginx/html;
+      }
+    }
+
+html:
+  index: |
+    <html>
+    <head>
+        <title>Тестовая страница</title>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+      <h1>Тестовая страница</h1>
+    </body>
+    </html>
+  50x: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+    <title>Error</title>
+    <style>
+        body {
+            width: 35em;
+            margin: 0 auto;
+            font-family: Tahoma, Verdana, Arial, sans-serif;
+        }
+    </style>
+    </head>
+    <body>
+    <h1>An error occurred.</h1>
+    <p>Sorry, the page you are looking for is currently unavailable.<br/>
+    Please try again later.</p>
+    </body>
+    </html>
 # This is to override the chart name.
 nameOverride: ""
 fullnameOverride: ""
